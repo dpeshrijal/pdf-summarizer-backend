@@ -32,7 +32,7 @@ try:
     PINECONE_INDEX_NAME = "resume-embeddings" 
     index = pc.Index(PINECONE_INDEX_NAME)
 
-    generative_model = genai.GenerativeModel('gemini-2.5-latest')
+    generative_model = genai.GenerativeModel('gemini-2.5-flash')
 
 except Exception as e:
     print(f"FATAL: Could not initialize services. Error: {e}")
