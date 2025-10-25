@@ -110,7 +110,9 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,
-      }
+      },
+      // Enable binary media types for PDF responses
+      binaryMediaTypes: ['application/pdf', '*/*']
     });
 
     // Create API endpoints and link them to our Lambdas
@@ -119,7 +121,9 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
 
 
     const generateDocumentsResource = api.root.addResource('generate-documents');
-    generateDocumentsResource.addMethod('POST', new apigateway.LambdaIntegration(generateDocumentsLambda));
+    generateDocumentsResource.addMethod('POST', new apigateway.LambdaIntegration(generateDocumentsLambda, {
+      contentHandling: apigateway.ContentHandling.CONVERT_TO_BINARY,
+    }));
 
     // 6. Output the new API URL
     new cdk.CfnOutput(this, 'ApiGatewayUrl', {

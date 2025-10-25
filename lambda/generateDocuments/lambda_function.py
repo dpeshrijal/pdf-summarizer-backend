@@ -129,9 +129,9 @@ def lambda_handler(event, context):
         pdf.chapter_title('Tailored Resume')
         pdf.chapter_body(generated_docs['tailoredResume'])
 
-        # fpdf2's output(dest='S') returns bytearray, not string
-        # So we can use it directly without encoding
-        pdf_output_bytes = pdf.output(dest='S')
+        # fpdf2's output() returns bytearray (PDF binary data)
+        # Note: dest parameter is deprecated since v2.2.0
+        pdf_output_bytes = pdf.output()
 
         pdf_base64 = base64.b64encode(pdf_output_bytes).decode('utf-8')
 
