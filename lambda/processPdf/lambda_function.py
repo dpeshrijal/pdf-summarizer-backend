@@ -32,7 +32,6 @@ try:
     pinecone_env = get_ssm_parameter("/pdf-summarizer/pinecone-environment")
     pc = Pinecone(api_key=pinecone_api_key, environment=pinecone_env)
     
-    # This is the name you gave your index in the Pinecone console
     PINECONE_INDEX_NAME = "resume-embeddings" 
     index = pc.Index(PINECONE_INDEX_NAME)
 
@@ -62,7 +61,7 @@ def get_embedding(text_chunk):
         result = genai.embed_content(
             model="models/text-embedding-004",
             content=text_chunk,
-            task_type="RETRIEVAL_DOCUMENT" # Important for storing documents
+            task_type="RETRIEVAL_DOCUMENT" 
         )
         return result['embedding']
     except Exception as e:
@@ -99,33 +98,27 @@ def lambda_handler(event, context):
         if not full_text:
             raise ValueError("No text could be extracted from the PDF.")
 
-        # 1. Chunk the extracted text
         text_chunks = chunk_text(full_text)
         print(f"Split text into {len(text_chunks)} chunks.")
 
         vectors_to_upsert = []
         for i, chunk in enumerate(text_chunks):
-            # 2. Create an embedding for each chunk
             embedding = get_embedding(chunk)
             if embedding:
-                # 3. Prepare the vector for Pinecone
                 vector_id = f"{job_id}-{i}"
                 vectors_to_upsert.append({
                     "id": vector_id,
                     "values": embedding,
-                    "metadata": {"text": chunk, "original_file_id": job_id} # Storing original fileId in metadata
+                    "metadata": {"text": chunk, "original_file_id": job_id}
                 })
 
         if vectors_to_upsert:
-            # 4. Upsert the vectors to Pinecone in batches
             print(f"Upserting {len(vectors_to_upsert)} vectors to Pinecone index '{PINECONE_INDEX_NAME}'...")
-            # Pinecone recommends upserting in batches for larger documents
-            for i in range(0, len(vectors_to_upsert), 100): # Upsert in batches of 100
+            for i in range(0, len(vectors_to_upsert), 100):
                 batch = vectors_to_upsert[i:i+100]
                 index.upsert(vectors=batch)
             print("Successfully upserted vectors to Pinecone.")
 
-        # 5. Update DynamoDB to show the resume is ready for querying
         table.update_item(
             Key={'fileId': job_id},
             UpdateExpression="set processingStatus = :p",
@@ -142,7 +135,7 @@ def lambda_handler(event, context):
             try:
                 table.update_item(
                     Key={'fileId': job_id_on_error},
-                    UpdateExpression="set processingStatus = :p, summary = :s", # Reusing 'summary' field for error
+                    UpdateExpression="set processingStatus = :p, summary = :s",
                     ExpressionAttributeValues={':p': 'FAILED', ':s': str(e)}
                 )
             except Exception as db_error:
