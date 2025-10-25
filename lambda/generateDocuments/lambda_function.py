@@ -17,6 +17,12 @@ CORS_HEADERS = {
     "Access-Control-Allow-Methods": "OPTIONS,POST,GET"
 }
 
+PDF_RESPONSE_HEADERS = {
+    **CORS_HEADERS,
+    "Content-Type": "application/pdf",
+    "Content-Disposition": "attachment; filename=tailored-documents.pdf"
+}
+
 def get_ssm_parameter(parameter_name):
     response = ssm.get_parameter(Name=parameter_name, WithDecryption=True)
     return response['Parameter']['Value']
@@ -118,20 +124,22 @@ def lambda_handler(event, context):
         pdf.add_page()
         pdf.chapter_title('Cover Letter')
         pdf.chapter_body(generated_docs['coverLetter'])
-        
+
         pdf.add_page()
         pdf.chapter_title('Tailored Resume')
         pdf.chapter_body(generated_docs['tailoredResume'])
-        
-        
-        pdf_output_string = pdf.output(dest='S')
-        pdf_output_bytes = pdf_output_string.encode('latin-1')
+
+        # fpdf2's output(dest='S') returns bytearray, not string
+        # So we can use it directly without encoding
+        pdf_output_bytes = pdf.output(dest='S')
 
         pdf_base64 = base64.b64encode(pdf_output_bytes).decode('utf-8')
-        
+
         return {
-            "statusCode": 200, "headers": CORS_HEADERS,
-            "body": pdf_base64, "isBase64Encoded": True
+            "statusCode": 200,
+            "headers": PDF_RESPONSE_HEADERS,
+            "body": pdf_base64,
+            "isBase64Encoded": True
         }
 
     except Exception as e:
