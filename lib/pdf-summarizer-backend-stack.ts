@@ -55,9 +55,9 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
     // 4. Define the Lambda Functions using the automated PythonFunction construct
     const processPdfLambda = new PythonFunction(this, 'ProcessPdfLambda', {
         runtime: lambda.Runtime.PYTHON_3_12,
-        entry: 'lambda/processPdf',
-        index: 'lambda_function.py',
-        handler: 'lambda_handler',
+        entry: 'lambda/processPdf',      // Points to the folder with requirements.txt
+        index: 'lambda_function.py',   // The file to use
+        handler: 'lambda_handler',       // The function to call
         role: lambdaRole,
         timeout: cdk.Duration.seconds(45),
         memorySize: 512,
@@ -92,23 +92,18 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
         role: lambdaRole,
         environment: {
             TABLE_NAME: summariesTable.tableName,
-            BUCKET_NAME: uploadsBucket.bucketName, // <-- ADDED THIS LINE
         }
     });
 
     const generateDocumentsLambda = new PythonFunction(this, 'GenerateDocumentsLambda', {
-        runtime: lambda.Runtime.PYTHON_3_12,
-        entry: 'lambda/generateDocuments', 
-        index: 'lambda_function.py',
-        handler: 'lambda_handler',
-        role: lambdaRole, 
-        timeout: cdk.Duration.seconds(90), // Increased timeout slightly
-        memorySize: 512,
-        environment: {
-            BUCKET_NAME: uploadsBucket.bucketName, // <-- ADDED THIS LINE
-            TABLE_NAME: summariesTable.tableName,
-        }
-    });
+    runtime: lambda.Runtime.PYTHON_3_12,
+    entry: 'lambda/generateDocuments', 
+    index: 'lambda_function.py',
+    handler: 'lambda_handler',
+    role: lambdaRole, 
+    timeout: cdk.Duration.seconds(60),
+    memorySize: 512,
+});
 
     // 5. Define the API Gateway
     const api = new apigateway.RestApi(this, 'PdfSummarizerApi', {
@@ -121,7 +116,10 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
     // Create API endpoints and link them to our Lambdas
     api.root.resourceForPath('get-upload-url').addMethod('GET', new apigateway.LambdaIntegration(getSignedUrlLambda));
     api.root.resourceForPath('get-summary-status').addMethod('GET', new apigateway.LambdaIntegration(getSummaryStatusLambda));
-    api.root.resourceForPath('generate-documents').addMethod('POST', new apigateway.LambdaIntegration(generateDocumentsLambda));
+
+
+    const generateDocumentsResource = api.root.addResource('generate-documents');
+    generateDocumentsResource.addMethod('POST', new apigateway.LambdaIntegration(generateDocumentsLambda));
 
     // 6. Output the new API URL
     new cdk.CfnOutput(this, 'ApiGatewayUrl', {
