@@ -6,7 +6,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import { S3EventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
-import * as ssm from 'aws-cdk-lib/aws-ssm';
+import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 
 export class PdfSummarizerBackendStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -25,14 +25,14 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
-    // 2. Define the DynamoDB Table to store summaries
+    // 2. Define the DynamoDB Table
     const summariesTable = new dynamodb.Table(this, 'SummariesTable', {
       partitionKey: { name: 'fileId', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
     
-    // 3. Define the IAM Role for our Lambda functions
+    // 3. Define the shared IAM Role for our Lambda functions
     const lambdaRole = new iam.Role(this, 'LambdaExecutionRole', {
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
         managedPolicies: [
@@ -40,32 +40,27 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
         ],
     });
 
-    // Add specific permissions to the role
+    // Grant necessary permissions to the role
     uploadsBucket.grantReadWrite(lambdaRole);
     summariesTable.grantReadWriteData(lambdaRole);
-    
-    // Grant permission to read the Gemini API key from SSM Parameter Store
-    // THIS BLOCK IS THE ONLY CHANGE
     lambdaRole.addToPolicy(new iam.PolicyStatement({
       actions: ['ssm:GetParameter'],
-      resources: [`arn:aws:ssm:${this.region}:${this.account}:parameter/pdf-summarizer/gemini-api-key`],
+      resources: [
+        `arn:aws:ssm:${this.region}:${this.account}:parameter/pdf-summarizer/gemini-api-key`,
+        `arn:aws:ssm:${this.region}:${this.account}:parameter/pdf-summarizer/pinecone-api-key`,
+        `arn:aws:ssm:${this.region}:${this.account}:parameter/pdf-summarizer/pinecone-environment`,
+      ],
     }));
 
-
-    // 4. Define the Lambda Layers
-    const pyMuPDFLayer = lambda.LayerVersion.fromLayerVersionArn(this, 'PyMuPDFLayer', 'arn:aws:lambda:us-east-1:770693421928:layer:Klayers-p312-PyMuPDF:2'); 
-    const geminiLayer = lambda.LayerVersion.fromLayerVersionArn(this, 'GeminiLayer', 'arn:aws:lambda:us-east-1:828244906528:layer:GeminiLayer-Compatible:1'); 
-
-
-    // 5. Define the Lambda Functions, pointing to our local code
-    const processPdfLambda = new lambda.Function(this, 'ProcessPdfLambda', {
+    // 4. Define the Lambda Functions using the automated PythonFunction construct
+    const processPdfLambda = new PythonFunction(this, 'ProcessPdfLambda', {
         runtime: lambda.Runtime.PYTHON_3_12,
-        handler: 'lambda_function.lambda_handler',
-        code: lambda.Code.fromAsset('lambda/processPdf'),
+        entry: 'lambda/processPdf',      // Points to the folder with requirements.txt
+        index: 'lambda_function.py',   // The file to use
+        handler: 'lambda_handler',       // The function to call
         role: lambdaRole,
-        timeout: cdk.Duration.seconds(30),
+        timeout: cdk.Duration.seconds(45),
         memorySize: 512,
-        layers: [pyMuPDFLayer, geminiLayer],
         environment: {
             TABLE_NAME: summariesTable.tableName,
         }
@@ -77,10 +72,11 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
         filters: [{ suffix: '.pdf' }],
     }));
 
-    const getSignedUrlLambda = new lambda.Function(this, 'GetSignedUrlLambda', {
+    const getSignedUrlLambda = new PythonFunction(this, 'GetSignedUrlLambda', {
         runtime: lambda.Runtime.PYTHON_3_12,
-        handler: 'lambda_function.lambda_handler',
-        code: lambda.Code.fromAsset('lambda/getSignedUploadUrl'),
+        entry: 'lambda/getSignedUploadUrl',
+        index: 'lambda_function.py',
+        handler: 'lambda_handler',
         role: lambdaRole,
         environment: {
             BUCKET_NAME: uploadsBucket.bucketName,
@@ -88,17 +84,18 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
         }
     });
 
-    const getSummaryStatusLambda = new lambda.Function(this, 'GetSummaryStatusLambda', {
+    const getSummaryStatusLambda = new PythonFunction(this, 'GetSummaryStatusLambda', {
         runtime: lambda.Runtime.PYTHON_3_12,
-        handler: 'lambda_function.lambda_handler',
-        code: lambda.Code.fromAsset('lambda/getSummaryStatus'),
+        entry: 'lambda/getSummaryStatus',
+        index: 'lambda_function.py',
+        handler: 'lambda_handler',
         role: lambdaRole,
         environment: {
             TABLE_NAME: summariesTable.tableName,
         }
     });
 
-    // 6. Define the API Gateway to trigger our functions
+    // 5. Define the API Gateway
     const api = new apigateway.RestApi(this, 'PdfSummarizerApi', {
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS,
@@ -110,7 +107,7 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
     api.root.resourceForPath('get-upload-url').addMethod('GET', new apigateway.LambdaIntegration(getSignedUrlLambda));
     api.root.resourceForPath('get-summary-status').addMethod('GET', new apigateway.LambdaIntegration(getSummaryStatusLambda));
 
-    // 7. Add a CfnOutput to easily find the new API URL after deployment
+    // 6. Output the new API URL
     new cdk.CfnOutput(this, 'ApiGatewayUrl', {
         value: api.url,
         description: 'The base URL for the API Gateway',
