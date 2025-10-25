@@ -7,7 +7,7 @@ from fpdf import FPDF
 import base64
 
 # =================================================================
-# Initialize Clients
+# Initialize Clients & CORS Headers
 # =================================================================
 ssm = boto3.client('ssm')
 
@@ -32,7 +32,7 @@ try:
     PINECONE_INDEX_NAME = "resume-embeddings" 
     index = pc.Index(PINECONE_INDEX_NAME)
 
-    generative_model = genai.GenerativeModel('gemini-flash-latest')
+    generative_model = genai.GenerativeModel('gemini-2.5-latest')
 
 except Exception as e:
     print(f"FATAL: Could not initialize services. Error: {e}")
@@ -45,13 +45,18 @@ class PDF(FPDF):
     def header(self):
         self.set_font('Helvetica', 'B', 12)
         self.cell(0, 10, 'Your Tailored Documents', 0, 1, 'C')
+
     def chapter_title(self, title):
         self.set_font('Helvetica', 'B', 12)
         self.cell(0, 10, title, 0, 1, 'L')
         self.ln(5)
+
     def chapter_body(self, body):
-        self.set_font('Helvetica', '', 10)
-        self.multi_cell(0, 5, body)
+        self.set_font('Helvetica', '', 11)
+        # Encode text to 'latin-1' and replace unsupported characters
+        # This is a safe way to handle a wide range of text with standard PDF fonts.
+        safe_body = body.encode('latin-1', 'replace').decode('latin-1')
+        self.multi_cell(0, 5, safe_body)
         self.ln()
 
 # =================================================================
@@ -79,31 +84,49 @@ def lambda_handler(event, context):
         resume_context = "\n---\n".join(context_chunks)
         
         prompt = f"""
-        You are a professional resume and cover letter writing assistant... (and so on)
-        ...Provide the output in a single, valid JSON object with two keys: "tailoredResume" and "coverLetter".
+        You are a professional resume and cover letter writing assistant. Your task is to generate a tailored resume and a cover letter for a specific job application.
+        You MUST ONLY use information provided in the 'MASTER RESUME CONTEXT' section. Do not invent, embellish, or infer any skills or experiences.
+
+        **JOB DESCRIPTION:**
+        ---
+        {job_description}
+        ---
+
+        **MASTER RESUME CONTEXT:**
+        ---
+        {resume_context}
+        ---
+
+        **TASK:**
+        1.  Generate a **Tailored Resume**: Review the JOB DESCRIPTION and select the most relevant experiences and skills from the MASTER RESUME CONTEXT. Format them as a professional resume in plain text. Prioritize accomplishments and skills that directly match the job requirements.
+        2.  Generate a **Cover Letter**: Write a concise, professional cover letter in plain text. In the letter, highlight 2-3 key experiences from the MASTER RESUME CONTEXT that make the candidate a strong fit for the role described in the JOB DESCRIPTION.
+
+        Provide the output in a single, valid JSON object with two keys: "tailoredResume" and "coverLetter". Do not add any extra text or formatting like ```json.
         """
         
         response = generative_model.generate_content(prompt)
         
-        # FIX 2: Add a robust check for an empty/blocked response from Gemini
         if not response.text:
             print(f"Gemini response was empty. Feedback: {response.prompt_feedback}")
-            raise ValueError("The response from the AI was blocked or empty. This may be due to safety filters. Try rephrasing the job description.")
+            raise ValueError("The response from the AI was blocked or empty. This may be due to safety filters.")
 
         cleaned_response_text = response.text.strip().replace('```json', '').replace('```', '')
         generated_docs = json.loads(cleaned_response_text)
 
-        # PDF Generation
+        # --- CORRECTED PDF Generation ---
         pdf = PDF()
         pdf.add_page()
         pdf.chapter_title('Cover Letter')
-        pdf.chapter_body(generated_docs['coverLetter'].encode('latin-1', 'replace').decode('latin-1'))
+        pdf.chapter_body(generated_docs['coverLetter'])
+        
         pdf.add_page()
         pdf.chapter_title('Tailored Resume')
-        pdf.chapter_body(generated_docs['tailoredResume'].encode('latin-1', 'replace').decode('latin-1'))
+        pdf.chapter_body(generated_docs['tailoredResume'])
         
-        # FIX 3: Remove the incorrect .encode() call. pdf.output('S') already returns bytes.
-        pdf_output_bytes = pdf.output(dest='S')
+        
+        pdf_output_string = pdf.output(dest='S')
+        pdf_output_bytes = pdf_output_string.encode('latin-1')
+
         pdf_base64 = base64.b64encode(pdf_output_bytes).decode('utf-8')
         
         return {
