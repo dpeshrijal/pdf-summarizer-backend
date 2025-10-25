@@ -95,6 +95,16 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
         }
     });
 
+    const generateDocumentsLambda = new PythonFunction(this, 'GenerateDocumentsLambda', {
+    runtime: lambda.Runtime.PYTHON_3_12,
+    entry: 'lambda/generateDocuments', 
+    index: 'lambda_function.py',
+    handler: 'lambda_handler',
+    role: lambdaRole, 
+    timeout: cdk.Duration.seconds(60),
+    memorySize: 512,
+});
+
     // 5. Define the API Gateway
     const api = new apigateway.RestApi(this, 'PdfSummarizerApi', {
       defaultCorsPreflightOptions: {
@@ -106,6 +116,10 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
     // Create API endpoints and link them to our Lambdas
     api.root.resourceForPath('get-upload-url').addMethod('GET', new apigateway.LambdaIntegration(getSignedUrlLambda));
     api.root.resourceForPath('get-summary-status').addMethod('GET', new apigateway.LambdaIntegration(getSummaryStatusLambda));
+
+
+    const generateDocumentsResource = api.root.addResource('generate-documents');
+    generateDocumentsResource.addMethod('POST', new apigateway.LambdaIntegration(generateDocumentsLambda));
 
     // 6. Output the new API URL
     new cdk.CfnOutput(this, 'ApiGatewayUrl', {
