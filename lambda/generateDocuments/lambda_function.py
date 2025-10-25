@@ -9,6 +9,13 @@ from pinecone import Pinecone
 # =================================================================
 ssm = boto3.client('ssm')
 
+# --- This is a standard header that will be included in all responses ---
+CORS_HEADERS = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "OPTIONS,POST,GET"
+}
+
 def get_ssm_parameter(parameter_name):
     """Helper function to get a SecureString parameter from SSM."""
     response = ssm.get_parameter(Name=parameter_name, WithDecryption=True)
@@ -22,7 +29,7 @@ try:
     # Pinecone API Configuration
     pinecone_api_key = get_ssm_parameter("/pdf-summarizer/pinecone-api-key")
     pinecone_env = get_ssm_parameter("/pdf-summarizer/pinecone-environment")
-    pc = Pinecone(api_key=pinecone_api_key, environment=pinecone_env)
+    pc = Pinecone(api_key=pinecone_api_key) # Environment is often optional in newer client versions
     
     PINECONE_INDEX_NAME = "resume-embeddings" 
     index = pc.Index(PINECONE_INDEX_NAME)
@@ -39,20 +46,21 @@ except Exception as e:
 # =================================================================
 def lambda_handler(event, context):
     try:
-        print("Received event:", json.dumps(event))
+        # API Gateway wraps the body in a string, so we need to parse it.
         body = json.loads(event.get('body', '{}'))
         
         job_description = body.get('jobDescription')
         file_id = body.get('fileId')
 
         if not job_description or not file_id:
+            print("Error: jobDescription and fileId are required.")
             return {
                 "statusCode": 400,
-                "headers": {"Access-Control-Allow-Origin": "*", "Content-Type": "application/json"},
+                "headers": CORS_HEADERS,
                 "body": json.dumps({"error": "jobDescription and fileId are required"})
             }
 
-        # 1. Create an embedding for the job description to find relevant context
+        # 1. Create an embedding for the job description
         print("Creating embedding for job description...")
         query_embedding = genai.embed_content(
             model="models/text-embedding-004",
@@ -65,12 +73,17 @@ def lambda_handler(event, context):
         query_response = index.query(
             vector=query_embedding,
             top_k=5, # Get the top 5 most relevant sections
-            include_metadata=True
+            include_metadata=True,
+            # Filter by the original fileId to ensure we only get chunks from the correct resume
+            filter={"original_file_id": {"$eq": file_id}}
         )
         
+        if not query_response['matches']:
+             raise ValueError("Could not find any relevant sections in the master resume for this job description.")
+
         context_chunks = [match['metadata']['text'] for match in query_response['matches']]
         resume_context = "\n---\n".join(context_chunks)
-        print(f"Retrieved context: {resume_context}")
+        print(f"Retrieved context for prompt.")
 
         # 3. Construct the detailed prompt for Gemini
         prompt = f"""
@@ -88,31 +101,34 @@ def lambda_handler(event, context):
         ---
 
         **TASK:**
-        1.  Generate a **Tailored Resume**: Review the JOB DESCRIPTION and select the most relevant experiences and skills from the MASTER RESUME CONTEXT. Format them as a professional resume. Prioritize accomplishments and skills that directly match the job requirements.
-        2.  Generate a **Cover Letter**: Write a concise, professional cover letter. In the letter, highlight 2-3 key experiences from the MASTER RESUME CONTEXT that make the candidate a strong fit for the role described in the JOB DESCRIPTION.
+        1.  Generate a **Tailored Resume**: Review the JOB DESCRIPTION and select the most relevant experiences and skills from the MASTER RESUME CONTEXT. Format them as a professional resume in plain text. Prioritize accomplishments and skills that directly match the job requirements.
+        2.  Generate a **Cover Letter**: Write a concise, professional cover letter in plain text. In the letter, highlight 2-3 key experiences from the MASTER RESUME CONTEXT that make the candidate a strong fit for the role described in the JOB DESCRIPTION.
 
-        Provide the output in a single JSON object with two keys: "tailoredResume" and "coverLetter".
+        Provide the output in a single, valid JSON object with two keys: "tailoredResume" and "coverLetter". Do not add any extra text or formatting like ```json.
         """
 
         # 4. Call the Gemini API to generate the documents
         print("Generating documents with Gemini...")
         response = generative_model.generate_content(prompt)
         
-        # Clean up the response from Gemini - it often includes ```json ... ```
-        cleaned_response = response.text.strip().replace('```json', '').replace('```', '')
+        # Clean up the response from Gemini - it sometimes includes markdown formatting
+        cleaned_response_text = response.text.strip().replace('```json', '').replace('```', '')
+        
+        # Ensure the response is valid JSON before sending it back
+        final_json_output = json.loads(cleaned_response_text)
         
         print("Successfully generated documents.")
         
         return {
             "statusCode": 200,
-            "headers": {"Access-Control-Allow-Origin": "*", "Content-Type": "application/json"},
-            "body": cleaned_response
+            "headers": CORS_HEADERS,
+            "body": json.dumps(final_json_output) # Re-serialize the cleaned JSON
         }
 
     except Exception as e:
         print(f"Error generating documents: {e}")
         return {
             "statusCode": 500,
-            "headers": {"Access-Control-Allow-Origin": "*", "Content-Type": "application/json"},
+            "headers": CORS_HEADERS,
             "body": json.dumps({"error": f"Failed to generate documents: {str(e)}"})
         }
