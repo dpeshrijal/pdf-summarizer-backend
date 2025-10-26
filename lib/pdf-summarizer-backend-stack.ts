@@ -25,11 +25,19 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
       autoDeleteObjects: true,
     });
 
-    // 2. Define the DynamoDB Table
+    // 2. Define the DynamoDB Tables
     const summariesTable = new dynamodb.Table(this, 'SummariesTable', {
       partitionKey: { name: 'fileId', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // New table for generation jobs (async processing)
+    const generationJobsTable = new dynamodb.Table(this, 'GenerationJobsTable', {
+      partitionKey: { name: 'jobId', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      timeToLiveAttribute: 'ttl', // Auto-delete old jobs after 24 hours
     });
     
     // 3. Define the shared IAM Role for our Lambda functions
@@ -43,6 +51,7 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
     // Grant necessary permissions to the role
     uploadsBucket.grantReadWrite(lambdaRole);
     summariesTable.grantReadWriteData(lambdaRole);
+    generationJobsTable.grantReadWriteData(lambdaRole);
     lambdaRole.addToPolicy(new iam.PolicyStatement({
       actions: ['ssm:GetParameter'],
       resources: [
@@ -50,6 +59,11 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
         `arn:aws:ssm:${this.region}:${this.account}:parameter/pdf-summarizer/pinecone-api-key`,
         `arn:aws:ssm:${this.region}:${this.account}:parameter/pdf-summarizer/pinecone-environment`,
       ],
+    }));
+    // Allow Lambda to invoke other Lambda functions (for async invocation)
+    lambdaRole.addToPolicy(new iam.PolicyStatement({
+      actions: ['lambda:InvokeFunction'],
+      resources: [`arn:aws:lambda:${this.region}:${this.account}:function:*`],
     }));
 
     // 4. Define the Lambda Functions using the automated PythonFunction construct
@@ -95,16 +109,51 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
         }
     });
 
-    const generateDocumentsLambda = new PythonFunction(this, 'GenerateDocumentsLambda', {
+    // New: Start Generation Lambda (returns immediately with jobId)
+    const startGenerationLambda = new PythonFunction(this, 'StartGenerationLambda', {
     runtime: lambda.Runtime.PYTHON_3_12,
-    entry: 'lambda/generateDocuments',
+    entry: 'lambda/startGeneration',
     index: 'lambda_function.py',
     handler: 'lambda_handler',
     role: lambdaRole,
-    timeout: cdk.Duration.seconds(60),
+    timeout: cdk.Duration.seconds(15),
+    memorySize: 256,
+    environment: {
+        GENERATION_JOBS_TABLE: generationJobsTable.tableName,
+        PROCESS_GENERATION_FUNCTION_NAME: 'ProcessGenerationLambda', // Will be updated after creation
+    }
+});
+
+    // Modified: Process Generation Lambda (async background processing)
+    const processGenerationLambda = new PythonFunction(this, 'ProcessGenerationLambda', {
+    runtime: lambda.Runtime.PYTHON_3_12,
+    entry: 'lambda/processGeneration',
+    index: 'lambda_function.py',
+    handler: 'lambda_handler',
+    role: lambdaRole,
+    timeout: cdk.Duration.minutes(10), // 10 minutes for slow models
     memorySize: 512,
     environment: {
         BUCKET_NAME: uploadsBucket.bucketName,
+        GENERATION_JOBS_TABLE: generationJobsTable.tableName,
+        MODEL_NAME: 'gemini-2.5-flash', // Can be changed to gemini-2.5-pro
+    }
+});
+
+    // Update startGeneration with the actual function name
+    startGenerationLambda.addEnvironment('PROCESS_GENERATION_FUNCTION_NAME', processGenerationLambda.functionName);
+
+    // New: Get Generation Status Lambda (for polling)
+    const getGenerationStatusLambda = new PythonFunction(this, 'GetGenerationStatusLambda', {
+    runtime: lambda.Runtime.PYTHON_3_12,
+    entry: 'lambda/getGenerationStatus',
+    index: 'lambda_function.py',
+    handler: 'lambda_handler',
+    role: lambdaRole,
+    timeout: cdk.Duration.seconds(10),
+    memorySize: 256,
+    environment: {
+        GENERATION_JOBS_TABLE: generationJobsTable.tableName,
     }
 });
 
@@ -120,9 +169,9 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
     api.root.resourceForPath('get-upload-url').addMethod('GET', new apigateway.LambdaIntegration(getSignedUrlLambda));
     api.root.resourceForPath('get-summary-status').addMethod('GET', new apigateway.LambdaIntegration(getSummaryStatusLambda));
 
-
-    const generateDocumentsResource = api.root.addResource('generate-documents');
-    generateDocumentsResource.addMethod('POST', new apigateway.LambdaIntegration(generateDocumentsLambda));
+    // New async generation endpoints
+    api.root.resourceForPath('start-generation').addMethod('POST', new apigateway.LambdaIntegration(startGenerationLambda));
+    api.root.resourceForPath('get-generation-status').addMethod('GET', new apigateway.LambdaIntegration(getGenerationStatusLambda));
 
     // 6. Output the new API URL
     new cdk.CfnOutput(this, 'ApiGatewayUrl', {

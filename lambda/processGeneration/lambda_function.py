@@ -1,4 +1,5 @@
 import json
+import os
 import boto3
 import google.generativeai as genai
 from pinecone import Pinecone
@@ -7,13 +8,11 @@ from pinecone import Pinecone
 # Initialize Clients (done once per cold start)
 # =================================================================
 ssm = boto3.client('ssm')
+dynamodb = boto3.resource('dynamodb')
 
-# --- This is a standard header that will be included in all responses ---
-CORS_HEADERS = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Methods": "OPTIONS,POST,GET"
-}
+# Environment variables
+GENERATION_JOBS_TABLE = os.environ.get('GENERATION_JOBS_TABLE')
+MODEL_NAME = os.environ.get('MODEL_NAME', 'gemini-2.5-pro')
 
 def get_ssm_parameter(parameter_name):
     """Helper function to get a SecureString parameter from SSM."""
@@ -24,17 +23,18 @@ try:
     # Gemini API Configuration
     gemini_api_key = get_ssm_parameter("/pdf-summarizer/gemini-api-key")
     genai.configure(api_key=gemini_api_key)
-    
+
     # Pinecone API Configuration
     pinecone_api_key = get_ssm_parameter("/pdf-summarizer/pinecone-api-key")
     pinecone_env = get_ssm_parameter("/pdf-summarizer/pinecone-environment")
-    pc = Pinecone(api_key=pinecone_api_key) # Environment is often optional in newer client versions
-    
-    PINECONE_INDEX_NAME = "resume-embeddings" 
+    pc = Pinecone(api_key=pinecone_api_key)
+
+    PINECONE_INDEX_NAME = "resume-embeddings"
     index = pc.Index(PINECONE_INDEX_NAME)
 
-    # Initialize the generative model for creating the content
-    generative_model = genai.GenerativeModel('gemini-2.5-flash')
+    # Initialize the generative model (can be changed via environment variable)
+    print(f"Initializing model: {MODEL_NAME}")
+    generative_model = genai.GenerativeModel(MODEL_NAME)
 
 except Exception as e:
     print(f"FATAL: Could not initialize one or more services. Error: {e}")
@@ -44,20 +44,25 @@ except Exception as e:
 # Main Lambda Handler
 # =================================================================
 def lambda_handler(event, context):
-    try:
-        # API Gateway wraps the body in a string, so we need to parse it.
-        body = json.loads(event.get('body', '{}'))
-        
-        job_description = body.get('jobDescription')
-        file_id = body.get('fileId')
+    """
+    Processes document generation in the background.
+    Updates DynamoDB with status and results.
+    """
+    job_id = None
 
-        if not job_description or not file_id:
-            print("Error: jobDescription and fileId are required.")
-            return {
-                "statusCode": 400,
-                "headers": CORS_HEADERS,
-                "body": json.dumps({"error": "jobDescription and fileId are required"})
-            }
+    try:
+        # Extract parameters from event (async invocation)
+        job_id = event.get('jobId')
+        job_description = event.get('jobDescription')
+        file_id = event.get('fileId')
+
+        if not job_id or not job_description or not file_id:
+            raise ValueError("jobId, jobDescription, and fileId are required")
+
+        print(f"Processing generation job: {job_id} with model: {MODEL_NAME}")
+
+        # Get DynamoDB table
+        table = dynamodb.Table(GENERATION_JOBS_TABLE)
 
         # 1. Create an embedding for the job description
         print("Creating embedding for job description...")
@@ -71,14 +76,13 @@ def lambda_handler(event, context):
         print("Querying Pinecone for relevant resume sections...")
         query_response = index.query(
             vector=query_embedding,
-            top_k=5, # Get the top 5 most relevant sections
+            top_k=5,
             include_metadata=True,
-            # Filter by the original fileId to ensure we only get chunks from the correct resume
             filter={"original_file_id": {"$eq": file_id}}
         )
-        
+
         if not query_response['matches']:
-             raise ValueError("Could not find any relevant sections in the master resume for this job description.")
+            raise ValueError("Could not find any relevant sections in the master resume for this job description.")
 
         context_chunks = [match['metadata']['text'] for match in query_response['matches']]
         resume_context = "\n---\n".join(context_chunks)
@@ -155,32 +159,54 @@ def lambda_handler(event, context):
         """
 
         # 4. Call the Gemini API to generate the documents
-        print("Generating documents with Gemini...")
+        print(f"Generating documents with {MODEL_NAME}...")
         response = generative_model.generate_content(prompt)
-        
-        # Clean up the response from Gemini - it sometimes includes markdown formatting
+
+        # Clean up the response from Gemini
         cleaned_response_text = response.text.strip().replace('```json', '').replace('```', '')
-        
-        # Ensure the response is valid JSON before sending it back
+
+        # Parse JSON
         final_json_output = json.loads(cleaned_response_text)
 
         print("Successfully generated documents.")
 
-        # Return text response immediately without PDFs to avoid API Gateway timeout
-        # User will get text content instantly
-        print(f"Returning text response (without PDFs to avoid timeout)")
-        response = {
-            "statusCode": 200,
-            "headers": CORS_HEADERS,
-            "body": json.dumps(final_json_output)
-        }
-        print(f"Response status: {response['statusCode']}")
-        return response
+        # 5. Update DynamoDB with COMPLETED status and results
+        table.update_item(
+            Key={'jobId': job_id},
+            UpdateExpression='SET #status = :status, tailoredResume = :resume, coverLetter = :coverLetter, completedAt = :completedAt',
+            ExpressionAttributeNames={
+                '#status': 'status'
+            },
+            ExpressionAttributeValues={
+                ':status': 'COMPLETED',
+                ':resume': final_json_output['tailoredResume'],
+                ':coverLetter': final_json_output['coverLetter'],
+                ':completedAt': int(context.get_remaining_time_in_millis() / 1000) if context else 0
+            }
+        )
+
+        print(f"Job {job_id} completed successfully")
+        return {"statusCode": 200, "message": "Generation completed"}
 
     except Exception as e:
-        print(f"Error generating documents: {e}")
-        return {
-            "statusCode": 500,
-            "headers": CORS_HEADERS,
-            "body": json.dumps({"error": f"Failed to generate documents: {str(e)}"})
-        }
+        print(f"Error processing generation job {job_id}: {e}")
+
+        # Update DynamoDB with FAILED status
+        if job_id:
+            try:
+                table = dynamodb.Table(GENERATION_JOBS_TABLE)
+                table.update_item(
+                    Key={'jobId': job_id},
+                    UpdateExpression='SET #status = :status, errorMessage = :error',
+                    ExpressionAttributeNames={
+                        '#status': 'status'
+                    },
+                    ExpressionAttributeValues={
+                        ':status': 'FAILED',
+                        ':error': str(e)
+                    }
+                )
+            except Exception as update_error:
+                print(f"Failed to update DynamoDB with error status: {update_error}")
+
+        raise e

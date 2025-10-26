@@ -1,3 +1,2 @@
 google-generativeai
 pinecone
-fpdf2
