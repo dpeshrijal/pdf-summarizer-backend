@@ -1,16 +1,12 @@
 import json
-import os
 import boto3
 import google.generativeai as genai
 from pinecone import Pinecone
-from fpdf import FPDF
-from datetime import datetime, timedelta
 
 # =================================================================
 # Initialize Clients (done once per cold start)
 # =================================================================
 ssm = boto3.client('ssm')
-s3 = boto3.client('s3')
 
 # --- This is a standard header that will be included in all responses ---
 CORS_HEADERS = {
@@ -43,76 +39,6 @@ try:
 except Exception as e:
     print(f"FATAL: Could not initialize one or more services. Error: {e}")
     raise e
-
-# =================================================================
-# PDF Generation Helper Functions
-# =================================================================
-def create_pdf_from_text(text_content, title):
-    """
-    Create a PDF from plain text content using fpdf2.
-    Returns the PDF content as bytes.
-    """
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
-
-    # Set margins to ensure enough space
-    pdf.set_left_margin(20)
-    pdf.set_right_margin(20)
-
-    # Add title
-    pdf.set_font("Arial", "B", 16)
-    # Use encode with 'latin-1' and 'replace' to handle special characters
-    safe_title = title.encode('latin-1', 'replace').decode('latin-1')
-    pdf.cell(0, 10, safe_title, ln=True, align="C")
-    pdf.ln(10)
-
-    # Add content
-    pdf.set_font("Arial", "", 11)
-
-    # Split text into lines and add to PDF
-    lines = text_content.split('\n')
-    for line in lines:
-        # Handle empty lines
-        if not line.strip():
-            pdf.ln(5)
-        else:
-            try:
-                # Clean the line - remove or replace problematic characters
-                # Convert to latin-1 compatible string
-                safe_line = line.encode('latin-1', 'replace').decode('latin-1')
-                # Use multi_cell to handle long lines with wrapping
-                pdf.multi_cell(0, 6, safe_line)
-            except Exception as e:
-                # If still fails, skip the line and log
-                print(f"Warning: Could not add line to PDF: {e}")
-                continue
-
-    return pdf.output(dest='S')  # Return as bytes
-
-def upload_pdf_to_s3(pdf_content, bucket_name, s3_key):
-    """
-    Upload PDF content to S3 and return a presigned URL.
-    """
-    # Upload to S3
-    s3.put_object(
-        Bucket=bucket_name,
-        Key=s3_key,
-        Body=pdf_content,
-        ContentType='application/pdf'
-    )
-
-    # Generate presigned URL (valid for 1 hour)
-    presigned_url = s3.generate_presigned_url(
-        'get_object',
-        Params={
-            'Bucket': bucket_name,
-            'Key': s3_key
-        },
-        ExpiresIn=3600  # 1 hour
-    )
-
-    return presigned_url
 
 # =================================================================
 # Main Lambda Handler
@@ -192,46 +118,16 @@ def lambda_handler(event, context):
 
         print("Successfully generated documents.")
 
-        # Generate PDFs from the text content (optional - if it fails, users still get text)
-        try:
-            print("Generating PDF files...")
-            resume_pdf = create_pdf_from_text(
-                final_json_output['tailoredResume'],
-                "Tailored Resume"
-            )
-            cover_letter_pdf = create_pdf_from_text(
-                final_json_output['coverLetter'],
-                "Cover Letter"
-            )
-
-            # Get bucket name from environment variable
-            bucket_name = os.environ.get('BUCKET_NAME')
-            if not bucket_name:
-                print("Warning: BUCKET_NAME environment variable not set, skipping PDF upload")
-            else:
-                # Upload PDFs to S3 and get presigned URLs
-                print("Uploading PDFs to S3...")
-                resume_s3_key = f"generated/{file_id}-resume.pdf"
-                cover_letter_s3_key = f"generated/{file_id}-cover-letter.pdf"
-
-                resume_pdf_url = upload_pdf_to_s3(resume_pdf, bucket_name, resume_s3_key)
-                cover_letter_pdf_url = upload_pdf_to_s3(cover_letter_pdf, bucket_name, cover_letter_s3_key)
-
-                print("PDFs uploaded successfully.")
-
-                # Add PDF URLs to the response
-                final_json_output['resumePdfUrl'] = resume_pdf_url
-                final_json_output['coverLetterPdfUrl'] = cover_letter_pdf_url
-
-        except Exception as pdf_error:
-            print(f"Warning: PDF generation failed, but text content is available. Error: {pdf_error}")
-            # Continue without PDFs - user still gets text content
-
-        return {
+        # Return text response immediately without PDFs to avoid API Gateway timeout
+        # User will get text content instantly
+        print(f"Returning text response (without PDFs to avoid timeout)")
+        response = {
             "statusCode": 200,
             "headers": CORS_HEADERS,
-            "body": json.dumps(final_json_output) # Re-serialize the cleaned JSON
+            "body": json.dumps(final_json_output)
         }
+        print(f"Response status: {response['statusCode']}")
+        return response
 
     except Exception as e:
         print(f"Error generating documents: {e}")
