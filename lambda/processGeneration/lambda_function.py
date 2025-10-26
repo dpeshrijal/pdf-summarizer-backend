@@ -112,14 +112,26 @@ def lambda_handler(event, context):
         **CRITICAL RULES - FOLLOW EXACTLY:**
 
         ✅ **DO (Strategic Optimization):**
-        - Extract implicit skills from explicit experience (e.g., "used AWS Lambda" → implies serverless architecture, event-driven design, cloud-native development)
-        - Match job description terminology exactly (if job says "full-stack" and candidate has both, say "full-stack")
-        - Expand abbreviations and technical depth from actual experience
-        - Use strong action verbs that match job requirements (Led, Architected, Optimized, Delivered, Spearheaded)
-        - Quantify achievements wherever possible (even estimates like "improved performance" → "optimized performance by ~30%")
+        - Extract implicit skills from explicit experience
+          * Tech: "used AWS Lambda" → serverless architecture, cloud-native development, event-driven design
+          * Healthcare: "administered medications" → medication management, patient safety protocols, drug interaction awareness
+          * Business: "managed projects" → project management, stakeholder coordination, resource allocation, risk mitigation
+          * Education: "taught courses" → curriculum development, student engagement, learning assessment, differentiated instruction
+          * Marketing: "ran campaigns" → campaign strategy, audience targeting, performance optimization, ROI analysis
+          * Finance: "prepared reports" → financial analysis, data visualization, forecasting, stakeholder communication
+        - Match job description terminology exactly (mirror their language and keywords)
+        - Expand on depth and breadth from actual experience
+        - Use strong action verbs that match the industry:
+          * Universal: Led, Delivered, Optimized, Achieved, Spearheaded, Implemented, Drove, Established
+          * Healthcare: Administered, Diagnosed, Treated, Counseled, Monitored, Assessed, Coordinated
+          * Business: Negotiated, Analyzed, Forecasted, Strategized, Executed, Optimized, Streamlined
+          * Education: Educated, Mentored, Facilitated, Developed, Assessed, Engaged, Differentiated
+          * Marketing: Launched, Executed, Optimized, Targeted, Converted, Scaled, Analyzed
+          * Finance: Analyzed, Forecasted, Audited, Reconciled, Modeled, Evaluated, Reported
+        - Quantify achievements wherever possible (use reasonable estimates based on context)
         - Reframe responsibilities to highlight impact and alignment with job needs
-        - Connect related technologies (Docker experience → containerization expertise, deployment automation)
-        - Emphasize learning agility and adaptability when there are skill gaps
+        - Connect related skills within the candidate's field and adjacent domains
+        - Emphasize learning agility, adaptability, and transferable skills when there are gaps
 
         ❌ **DO NOT (Fabrication):**
         - Add technologies or tools the candidate has never used
@@ -127,6 +139,9 @@ def lambda_handler(event, context):
         - Claim certifications not mentioned
         - Create fictional projects or companies
         - Add years of experience with technologies they haven't used
+        - Add medical procedures/medications never administered (healthcare)
+        - Add courses/subjects never taught (education)
+        - Add business deals/projects never worked on (business)
 
         **TASK:**
         1.  Generate a **Tailored Resume**: Strategically present the candidate's experience to maximize alignment with the job description.
@@ -154,14 +169,40 @@ def lambda_handler(event, context):
             [Keep concise - 4-6 categories max, ~80-100 words total]
             - Prioritize skills mentioned in job description
             - Use job description terminology for categories
-            - Group related technologies together
+            - Group related skills together
             - List only most relevant skills
+            - Adapt categories to the field (see examples below)
 
-            Example format (adjust categories based on job requirements):
-            Programming Languages: [list 5-8 most relevant]
-            Frameworks & Tools: [list 5-8 most relevant]
-            Cloud & DevOps: [list 4-6 most relevant]
-            Databases: [list 2-4 most relevant]
+            **ADAPT CATEGORIES TO FIELD:**
+
+            For Tech/Software roles:
+            Programming Languages: [list]
+            Frameworks & Tools: [list]
+            Cloud & DevOps: [list]
+
+            For Healthcare/Pharmacy roles:
+            Clinical Skills: [list relevant clinical competencies]
+            Medications & Therapies: [list drug classes, therapeutic areas]
+            Systems & Software: [pharmacy management systems, EHR platforms]
+
+            For Business/Finance roles:
+            Technical Skills: [Excel, SQL, BI tools, CRM systems]
+            Business Tools: [project management, analytics, communication platforms]
+            Analytical Skills: [financial modeling, forecasting, data analysis]
+
+            For Education roles:
+            Teaching Methods: [pedagogical approaches, classroom management]
+            Subject Expertise: [specific subjects, grade levels, curriculum standards]
+            Educational Technology: [LMS platforms, educational software, digital tools]
+
+            For Marketing/Sales roles:
+            Digital Marketing: [SEO, SEM, social media, content marketing]
+            Analytics & Tools: [Google Analytics, CRM, marketing automation]
+            Campaign Management: [email marketing, paid advertising, A/B testing]
+
+            For Other Professions:
+            Adapt categories to the specific field using job description terminology.
+            Common patterns: Technical Skills, Soft Skills, Industry Knowledge, Tools & Systems
 
             Keep it scannable and focused - recruiters spend 6 seconds on first pass!
 
@@ -175,14 +216,32 @@ def lambda_handler(event, context):
 
             STRATEGIC BULLET POINT WRITING (BE CONCISE!):
             • Lead with accomplishments that most closely match job requirements
-            • Use strong action verbs: Architected, Spearheaded, Optimized, Delivered, Led, Engineered
+            • Use strong action verbs appropriate to the field (see earlier examples)
             • Quantify impact when possible (use reasonable estimates)
             • Each bullet should be ONE powerful sentence (not multiple sentences)
-            • Include technical keywords from job description
+            • Include keywords from job description
 
-            Example (concise):
+            Field-Specific Examples (concise format):
+
+            Tech/Software:
             ✅ "Architected serverless solutions using AWS Lambda and DynamoDB, reducing infrastructure costs by 40%"
-            ❌ "Worked on AWS projects. Used Lambda for serverless functions. Also implemented DynamoDB. This helped reduce costs."
+            ❌ "Worked on AWS projects. Used Lambda. Also implemented DynamoDB. This helped reduce costs."
+
+            Healthcare/Pharmacy:
+            ✅ "Counseled 50+ patients daily on medication management and drug interactions, improving adherence by 35%"
+            ❌ "Talked to patients about their medications. Helped them understand how to take them properly."
+
+            Business/Finance:
+            ✅ "Led cross-functional team to deliver $2M cost reduction initiative, exceeding targets by 20%"
+            ❌ "Worked on cost-saving projects with various teams and helped save money for the company."
+
+            Education:
+            ✅ "Developed and delivered engaging curriculum for 120+ students, improving test scores by 25%"
+            ❌ "Taught classes and created lesson plans. Students performed better on tests."
+
+            Marketing/Sales:
+            ✅ "Launched digital marketing campaign generating 200K+ impressions and $500K revenue"
+            ❌ "Ran marketing campaigns on social media. Got lots of views and made sales."
 
             IMPORTANT:
             - Date format: "Job Title, Company Name (Location) (YYYY - YYYY)"
@@ -212,20 +271,46 @@ def lambda_handler(event, context):
             Think like a hiring manager reading this resume against the job description. Your goal is to make them think:
             "This candidate is exactly what we're looking for!" while being 100% truthful.
 
-            Extract maximum value from their actual experience:
-            - If they deployed code → they understand deployment pipelines, DevOps practices
+            Extract maximum value from their actual experience across any field:
+
+            **Tech/Software:**
+            - If they deployed code → they understand deployment pipelines, DevOps practices, CI/CD
             - If they used a framework → they understand the ecosystem, best practices, architecture patterns
+            - If they debugged issues → they have troubleshooting, problem-solving, analytical skills
+
+            **Healthcare:**
+            - If they administered medications → they understand pharmacology, drug interactions, patient safety
+            - If they counseled patients → they have communication, empathy, health education skills
+            - If they worked with systems → they have healthcare IT, EHR proficiency, workflow optimization
+
+            **Business:**
+            - If they managed projects → they have planning, coordination, stakeholder management skills
+            - If they prepared reports → they have analytical, communication, data interpretation skills
+            - If they worked cross-functionally → they have collaboration, negotiation, leadership skills
+
+            **Education:**
+            - If they taught courses → they have curriculum design, presentation, assessment skills
+            - If they managed classrooms → they have organization, conflict resolution, motivation skills
+            - If they adapted lessons → they have differentiation, creativity, student-centered approach
+
+            **Marketing:**
+            - If they ran campaigns → they have strategy, execution, performance tracking skills
+            - If they created content → they have storytelling, audience understanding, brand alignment
+            - If they analyzed metrics → they have data-driven decision-making, optimization skills
+
+            **Universal Principles:**
             - If they solved a problem → they're a problem-solver who can handle similar challenges
             - If they worked in a team → they have collaboration, communication, and teamwork skills
-            - If they delivered features → they have end-to-end ownership and delivery capabilities
+            - If they delivered results → they have end-to-end ownership and execution capabilities
+            - If they adapted to change → they have agility, resilience, and learning orientation
 
             HONESTY BOUNDARY:
             - Extract and expand on implicit skills from actual work ✅
             - Use strategic language and framing ✅
             - Quantify with reasonable estimates ✅
-            - Add technologies they've never touched ❌
+            - Add technologies/skills they've never used ❌
             - Invent projects or experiences ❌
-            - Falsify dates or companies ❌
+            - Falsify dates, companies, or credentials ❌
 
             **FINAL CHECK - ONE PAGE REQUIREMENT:**
             Before finalizing, verify the resume is approximately 500-650 words total:
@@ -255,6 +340,14 @@ def lambda_handler(event, context):
             - Make it about THEM (what you can do for the company) not just YOU
             - Keep it concise (300-400 words)
             - Use specific examples from actual experience that match their needs
+            - Adapt tone to field: technical precision (tech), empathy (healthcare), results-driven (business), student-focused (education)
+
+        **FINAL REMINDERS - UNIVERSAL APPROACH:**
+        - This system works for ALL professions: tech, healthcare, business, education, marketing, finance, and beyond
+        - Always adapt language, categories, and examples to match the specific field and job description
+        - The principles remain the same: extract implicit skills, use strategic language, quantify impact, maintain honesty
+        - Let the job description guide your choices for terminology, skills categories, and emphasis areas
+        - When in doubt, mirror the job description's language and structure
 
         Provide the output in a single, valid JSON object with two keys: "tailoredResume" and "coverLetter". Do not add any extra text or formatting like ```json.
         """
