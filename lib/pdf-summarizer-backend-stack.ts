@@ -97,12 +97,15 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
 
     const generateDocumentsLambda = new PythonFunction(this, 'GenerateDocumentsLambda', {
     runtime: lambda.Runtime.PYTHON_3_12,
-    entry: 'lambda/generateDocuments', 
+    entry: 'lambda/generateDocuments',
     index: 'lambda_function.py',
     handler: 'lambda_handler',
-    role: lambdaRole, 
+    role: lambdaRole,
     timeout: cdk.Duration.seconds(60),
     memorySize: 512,
+    environment: {
+        BUCKET_NAME: uploadsBucket.bucketName,
+    }
 });
 
     // 5. Define the API Gateway

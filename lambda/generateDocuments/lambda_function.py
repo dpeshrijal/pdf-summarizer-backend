@@ -3,11 +3,14 @@ import os
 import boto3
 import google.generativeai as genai
 from pinecone import Pinecone
+from fpdf import FPDF
+from datetime import datetime, timedelta
 
 # =================================================================
 # Initialize Clients (done once per cold start)
 # =================================================================
 ssm = boto3.client('ssm')
+s3 = boto3.client('s3')
 
 # --- This is a standard header that will be included in all responses ---
 CORS_HEADERS = {
@@ -40,6 +43,62 @@ try:
 except Exception as e:
     print(f"FATAL: Could not initialize one or more services. Error: {e}")
     raise e
+
+# =================================================================
+# PDF Generation Helper Functions
+# =================================================================
+def create_pdf_from_text(text_content, title):
+    """
+    Create a PDF from plain text content using fpdf2.
+    Returns the PDF content as bytes.
+    """
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_auto_page_break(auto=True, margin=15)
+
+    # Add title
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 10, title, ln=True, align="C")
+    pdf.ln(10)
+
+    # Add content
+    pdf.set_font("Arial", "", 11)
+
+    # Split text into lines and add to PDF
+    lines = text_content.split('\n')
+    for line in lines:
+        # Handle empty lines
+        if not line.strip():
+            pdf.ln(5)
+        else:
+            # Use multi_cell to handle long lines with wrapping
+            pdf.multi_cell(0, 6, line)
+
+    return pdf.output(dest='S')  # Return as bytes
+
+def upload_pdf_to_s3(pdf_content, bucket_name, s3_key):
+    """
+    Upload PDF content to S3 and return a presigned URL.
+    """
+    # Upload to S3
+    s3.put_object(
+        Bucket=bucket_name,
+        Key=s3_key,
+        Body=pdf_content,
+        ContentType='application/pdf'
+    )
+
+    # Generate presigned URL (valid for 1 hour)
+    presigned_url = s3.generate_presigned_url(
+        'get_object',
+        Params={
+            'Bucket': bucket_name,
+            'Key': s3_key
+        },
+        ExpiresIn=3600  # 1 hour
+    )
+
+    return presigned_url
 
 # =================================================================
 # Main Lambda Handler
@@ -116,9 +175,39 @@ def lambda_handler(event, context):
         
         # Ensure the response is valid JSON before sending it back
         final_json_output = json.loads(cleaned_response_text)
-        
+
         print("Successfully generated documents.")
-        
+
+        # Generate PDFs from the text content
+        print("Generating PDF files...")
+        resume_pdf = create_pdf_from_text(
+            final_json_output['tailoredResume'],
+            "Tailored Resume"
+        )
+        cover_letter_pdf = create_pdf_from_text(
+            final_json_output['coverLetter'],
+            "Cover Letter"
+        )
+
+        # Get bucket name from environment variable
+        bucket_name = os.environ.get('BUCKET_NAME')
+        if not bucket_name:
+            raise ValueError("BUCKET_NAME environment variable not set")
+
+        # Upload PDFs to S3 and get presigned URLs
+        print("Uploading PDFs to S3...")
+        resume_s3_key = f"generated/{file_id}-resume.pdf"
+        cover_letter_s3_key = f"generated/{file_id}-cover-letter.pdf"
+
+        resume_pdf_url = upload_pdf_to_s3(resume_pdf, bucket_name, resume_s3_key)
+        cover_letter_pdf_url = upload_pdf_to_s3(cover_letter_pdf, bucket_name, cover_letter_s3_key)
+
+        print("PDFs uploaded successfully.")
+
+        # Add PDF URLs to the response
+        final_json_output['resumePdfUrl'] = resume_pdf_url
+        final_json_output['coverLetterPdfUrl'] = cover_letter_pdf_url
+
         return {
             "statusCode": 200,
             "headers": CORS_HEADERS,
