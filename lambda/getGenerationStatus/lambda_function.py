@@ -1,6 +1,7 @@
 import json
 import os
 import boto3
+from decimal import Decimal
 
 # Initialize DynamoDB client
 dynamodb = boto3.resource('dynamodb')
@@ -14,6 +15,20 @@ CORS_HEADERS = {
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Allow-Methods": "OPTIONS,POST,GET"
 }
+
+# Helper function to convert Decimal to int/float for JSON serialization
+def convert_decimal(obj):
+    """Convert DynamoDB Decimal objects to int or float for JSON serialization."""
+    if isinstance(obj, Decimal):
+        if obj % 1 == 0:
+            return int(obj)
+        else:
+            return float(obj)
+    elif isinstance(obj, dict):
+        return {k: convert_decimal(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_decimal(i) for i in obj]
+    return obj
 
 def lambda_handler(event, context):
     """
@@ -44,6 +59,9 @@ def lambda_handler(event, context):
             }
 
         item = response['Item']
+
+        # Convert Decimal objects to int/float
+        item = convert_decimal(item)
 
         # Build response based on status
         result = {
