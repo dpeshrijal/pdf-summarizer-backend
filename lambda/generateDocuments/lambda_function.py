@@ -56,9 +56,15 @@ def create_pdf_from_text(text_content, title):
     pdf.add_page()
     pdf.set_auto_page_break(auto=True, margin=15)
 
+    # Set margins to ensure enough space
+    pdf.set_left_margin(20)
+    pdf.set_right_margin(20)
+
     # Add title
     pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, title, ln=True, align="C")
+    # Use encode with 'latin-1' and 'replace' to handle special characters
+    safe_title = title.encode('latin-1', 'replace').decode('latin-1')
+    pdf.cell(0, 10, safe_title, ln=True, align="C")
     pdf.ln(10)
 
     # Add content
@@ -71,8 +77,16 @@ def create_pdf_from_text(text_content, title):
         if not line.strip():
             pdf.ln(5)
         else:
-            # Use multi_cell to handle long lines with wrapping
-            pdf.multi_cell(0, 6, line)
+            try:
+                # Clean the line - remove or replace problematic characters
+                # Convert to latin-1 compatible string
+                safe_line = line.encode('latin-1', 'replace').decode('latin-1')
+                # Use multi_cell to handle long lines with wrapping
+                pdf.multi_cell(0, 6, safe_line)
+            except Exception as e:
+                # If still fails, skip the line and log
+                print(f"Warning: Could not add line to PDF: {e}")
+                continue
 
     return pdf.output(dest='S')  # Return as bytes
 
@@ -178,35 +192,40 @@ def lambda_handler(event, context):
 
         print("Successfully generated documents.")
 
-        # Generate PDFs from the text content
-        print("Generating PDF files...")
-        resume_pdf = create_pdf_from_text(
-            final_json_output['tailoredResume'],
-            "Tailored Resume"
-        )
-        cover_letter_pdf = create_pdf_from_text(
-            final_json_output['coverLetter'],
-            "Cover Letter"
-        )
+        # Generate PDFs from the text content (optional - if it fails, users still get text)
+        try:
+            print("Generating PDF files...")
+            resume_pdf = create_pdf_from_text(
+                final_json_output['tailoredResume'],
+                "Tailored Resume"
+            )
+            cover_letter_pdf = create_pdf_from_text(
+                final_json_output['coverLetter'],
+                "Cover Letter"
+            )
 
-        # Get bucket name from environment variable
-        bucket_name = os.environ.get('BUCKET_NAME')
-        if not bucket_name:
-            raise ValueError("BUCKET_NAME environment variable not set")
+            # Get bucket name from environment variable
+            bucket_name = os.environ.get('BUCKET_NAME')
+            if not bucket_name:
+                print("Warning: BUCKET_NAME environment variable not set, skipping PDF upload")
+            else:
+                # Upload PDFs to S3 and get presigned URLs
+                print("Uploading PDFs to S3...")
+                resume_s3_key = f"generated/{file_id}-resume.pdf"
+                cover_letter_s3_key = f"generated/{file_id}-cover-letter.pdf"
 
-        # Upload PDFs to S3 and get presigned URLs
-        print("Uploading PDFs to S3...")
-        resume_s3_key = f"generated/{file_id}-resume.pdf"
-        cover_letter_s3_key = f"generated/{file_id}-cover-letter.pdf"
+                resume_pdf_url = upload_pdf_to_s3(resume_pdf, bucket_name, resume_s3_key)
+                cover_letter_pdf_url = upload_pdf_to_s3(cover_letter_pdf, bucket_name, cover_letter_s3_key)
 
-        resume_pdf_url = upload_pdf_to_s3(resume_pdf, bucket_name, resume_s3_key)
-        cover_letter_pdf_url = upload_pdf_to_s3(cover_letter_pdf, bucket_name, cover_letter_s3_key)
+                print("PDFs uploaded successfully.")
 
-        print("PDFs uploaded successfully.")
+                # Add PDF URLs to the response
+                final_json_output['resumePdfUrl'] = resume_pdf_url
+                final_json_output['coverLetterPdfUrl'] = cover_letter_pdf_url
 
-        # Add PDF URLs to the response
-        final_json_output['resumePdfUrl'] = resume_pdf_url
-        final_json_output['coverLetterPdfUrl'] = cover_letter_pdf_url
+        except Exception as pdf_error:
+            print(f"Warning: PDF generation failed, but text content is available. Error: {pdf_error}")
+            # Continue without PDFs - user still gets text content
 
         return {
             "statusCode": 200,
