@@ -118,10 +118,13 @@ def lambda_handler(event, context):
             Tools: [list]
 
             **WORK EXPERIENCE**
-            [Job Title], [Company Name] ([Location]) ([Start Year] - [End Year or Present])
+            Job Title, Company Name (Location) (Start Year - End Year or Present)
             • [Achievement/responsibility using action verbs - quantify when possible]
             • [Achievement/responsibility using action verbs - quantify when possible]
             • [Achievement/responsibility using action verbs - quantify when possible]
+
+            IMPORTANT: The date (Start Year - End Year) should be at the END of the job title line in parentheses.
+            Example: Software Developer, Request Finance (Paris, France) (2022 - Present)
 
             [Repeat for each relevant position]
 
