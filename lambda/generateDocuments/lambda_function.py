@@ -100,7 +100,14 @@ def lambda_handler(event, context):
         ---
 
         **TASK:**
-        1.  Generate a **Tailored Resume**: Review the JOB DESCRIPTION and select the most relevant experiences and skills from the MASTER RESUME CONTEXT. Format them as a professional resume in plain text. Prioritize accomplishments and skills that directly match the job requirements.
+        1.  Generate a **Tailored Resume**: Review the JOB DESCRIPTION and select the most relevant experiences and skills from the MASTER RESUME CONTEXT. Format them as a professional resume in plain text following this exact structure:
+            - First line: Candidate's full name (from context)
+            - Second line: Email: [email] | Git: [github] | LinkedIn: [linkedin]
+            - Then sections in ALL CAPS like: SUMMARY, SKILLS, WORK EXPERIENCE, CERTIFICATION, EDUCATION
+            - Under SKILLS, use subsection headers like "Programming Languages:", "Frameworks and Libraries:", etc. (bold these)
+            - Under WORK EXPERIENCE, format as: "Job Title, Company Name (Location) (Start Year – End Year)" (bold this line)
+            - Use bullet points (•) for achievements and responsibilities
+            - Keep the format clean and professional
         2.  Generate a **Cover Letter**: Write a concise, professional cover letter in plain text. In the letter, highlight 2-3 key experiences from the MASTER RESUME CONTEXT that make the candidate a strong fit for the role described in the JOB DESCRIPTION.
 
         Provide the output in a single, valid JSON object with two keys: "tailoredResume" and "coverLetter". Do not add any extra text or formatting like ```json.
