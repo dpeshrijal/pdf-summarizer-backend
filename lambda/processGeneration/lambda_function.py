@@ -90,8 +90,7 @@ def lambda_handler(event, context):
 
         # 3. Construct the detailed prompt for Gemini
         prompt = f"""
-        You are a professional resume and cover letter writing assistant. Your task is to generate a tailored resume and a cover letter for a specific job application.
-        You MUST ONLY use information provided in the 'MASTER RESUME CONTEXT' section. Do not invent, embellish, or infer any skills or experiences.
+        You are an expert resume strategist and career advisor. Your task is to generate a highly competitive, ATS-optimized resume and cover letter that maximizes the candidate's chances of getting interviews.
 
         **JOB DESCRIPTION:**
         ---
@@ -103,8 +102,34 @@ def lambda_handler(event, context):
         {resume_context}
         ---
 
+        **STRATEGIC TAILORING PHILOSOPHY:**
+        Your goal is to present the candidate in the STRONGEST possible light by:
+        1. Extracting implicit skills and expertise from their actual experience
+        2. Using strategic language that matches the job description's terminology
+        3. Highlighting transferable skills and relevant accomplishments
+        4. Positioning the candidate as an ideal fit through honest reframing
+
+        **CRITICAL RULES - FOLLOW EXACTLY:**
+
+        ✅ **DO (Strategic Optimization):**
+        - Extract implicit skills from explicit experience (e.g., "used AWS Lambda" → implies serverless architecture, event-driven design, cloud-native development)
+        - Match job description terminology exactly (if job says "full-stack" and candidate has both, say "full-stack")
+        - Expand abbreviations and technical depth from actual experience
+        - Use strong action verbs that match job requirements (Led, Architected, Optimized, Delivered, Spearheaded)
+        - Quantify achievements wherever possible (even estimates like "improved performance" → "optimized performance by ~30%")
+        - Reframe responsibilities to highlight impact and alignment with job needs
+        - Connect related technologies (Docker experience → containerization expertise, deployment automation)
+        - Emphasize learning agility and adaptability when there are skill gaps
+
+        ❌ **DO NOT (Fabrication):**
+        - Add technologies or tools the candidate has never used
+        - Invent job responsibilities that didn't exist
+        - Claim certifications not mentioned
+        - Create fictional projects or companies
+        - Add years of experience with technologies they haven't used
+
         **TASK:**
-        1.  Generate a **Tailored Resume**: Review the JOB DESCRIPTION and select the most relevant experiences and skills from the MASTER RESUME CONTEXT.
+        1.  Generate a **Tailored Resume**: Strategically present the candidate's experience to maximize alignment with the job description.
 
             Format as a professional ATS-friendly resume following this EXACT structure:
 
@@ -115,22 +140,43 @@ def lambda_handler(event, context):
             [2-3 sentences highlighting key qualifications relevant to the job]
 
             **SKILLS**
-            Programming Languages: [list]
-            Frameworks & Libraries: [list]
-            Databases: [list]
-            Cloud & DevOps: [list]
-            Tools: [list]
+            [Group skills strategically to match job description categories]
+            - Use job description terminology for categories
+            - Include explicit skills from resume
+            - Add implicit skills derived from their experience (e.g., if they used React, they know JavaScript, component architecture, state management)
+            - Prioritize skills mentioned in job description
+            - Group related technologies together
+
+            Example format:
+            Programming Languages: [list technologies explicitly and implicitly used]
+            Frameworks & Libraries: [list based on actual projects]
+            Databases: [list what they've actually worked with]
+            Cloud & DevOps: [expand from their AWS/cloud experience - if they used Lambda, they understand serverless, if they deployed code, they understand CI/CD concepts]
+            Tools & Technologies: [list tools they've used or would naturally use given their experience]
 
             **WORK EXPERIENCE**
             Job Title, Company Name (Location) (Start Year - End Year or Present)
-            • [Achievement/responsibility using action verbs - quantify when possible]
-            • [Achievement/responsibility using action verbs - quantify when possible]
-            • [Achievement/responsibility using action verbs - quantify when possible]
+
+            STRATEGIC BULLET POINT WRITING:
+            • Lead with accomplishments that most closely match job requirements
+            • Use strong action verbs: Architected, Spearheaded, Optimized, Delivered, Led, Implemented, Engineered
+            • Quantify impact when possible (use reasonable estimates if exact numbers aren't available)
+            • Expand on technical depth from actual work (e.g., "worked with AWS" → "Architected serverless solutions using AWS Lambda, S3, and DynamoDB")
+            • Connect work to job description needs (if job needs scalability, emphasize scalable solutions you built)
+            • Show progression and impact (delivered X which resulted in Y)
+            • Include technical keywords from job description naturally in bullet points
+
+            Example transformations:
+            - Before: "Developed features using React"
+            - After: "Architected and delivered responsive UI components using React, optimizing performance and user experience"
+
+            - Before: "Used AWS services"
+            - After: "Engineered cloud-native solutions leveraging AWS Lambda, S3, and DynamoDB, implementing serverless architecture for scalable deployments"
 
             IMPORTANT: The date (Start Year - End Year) should be at the END of the job title line in parentheses.
             Example: Software Developer, Request Finance (Paris, France) (2022 - Present)
 
-            [Repeat for each relevant position]
+            [Repeat for each relevant position, prioritizing most recent and most relevant]
 
             **CERTIFICATIONS**
             • [Certification Name] ([Year])
@@ -145,15 +191,46 @@ def lambda_handler(event, context):
             - Section headers (SUMMARY, SKILLS, etc.) must be in ALL CAPS
             - Job titles should include company, location, and dates in format: "Title, Company (Location) (YYYY - YYYY)"
             - Use bullet points (•) for all achievements and responsibilities
-            - Use action verbs (Developed, Led, Implemented, Optimized, etc.)
-            - Be specific and quantify achievements when possible
-            - Only include information from the MASTER RESUME CONTEXT - do not fabricate details
+            - Use powerful action verbs that match job description language
+            - Be specific and quantify achievements (use reasonable estimates if exact numbers unknown)
+            - Mirror job description keywords naturally throughout the resume
+            - Make every word count - this is a competitive application
 
-        2.  Generate a **Cover Letter**: Write a professional cover letter in business letter format. Include:
-            - Opening paragraph expressing interest in the specific role
-            - 2-3 paragraphs highlighting relevant experiences from MASTER RESUME CONTEXT that match the job requirements
-            - Closing paragraph with call to action
-            - Keep it concise (under 400 words)
+            **STRATEGIC MINDSET:**
+            Think like a hiring manager reading this resume against the job description. Your goal is to make them think:
+            "This candidate is exactly what we're looking for!" while being 100% truthful.
+
+            Extract maximum value from their actual experience:
+            - If they deployed code → they understand deployment pipelines, DevOps practices
+            - If they used a framework → they understand the ecosystem, best practices, architecture patterns
+            - If they solved a problem → they're a problem-solver who can handle similar challenges
+            - If they worked in a team → they have collaboration, communication, and teamwork skills
+            - If they delivered features → they have end-to-end ownership and delivery capabilities
+
+            HONESTY BOUNDARY:
+            - Extract and expand on implicit skills from actual work ✅
+            - Use strategic language and framing ✅
+            - Quantify with reasonable estimates ✅
+            - Add technologies they've never touched ❌
+            - Invent projects or experiences ❌
+            - Falsify dates or companies ❌
+
+        2.  Generate a **Cover Letter**: Write a compelling, personalized cover letter that makes the hiring manager want to interview this candidate.
+
+            COVER LETTER STRATEGY:
+            - Opening: Express genuine enthusiasm for the role and company, mention the specific position
+            - Body paragraph 1: Highlight 2-3 key experiences that directly align with the most important job requirements
+            - Body paragraph 2: Demonstrate cultural fit and why you're excited about this opportunity (based on job description language)
+            - Body paragraph 3: Show understanding of the company's challenges/goals (infer from job description) and how you can contribute
+            - Closing: Strong call to action expressing eagerness to discuss how you can contribute
+
+            STRATEGIC APPROACH:
+            - Mirror language from job description (if they say "innovative," use "innovation")
+            - Show you understand their needs and have solved similar problems
+            - Be confident but not arrogant
+            - Make it about THEM (what you can do for the company) not just YOU
+            - Keep it concise (300-400 words)
+            - Use specific examples from actual experience that match their needs
 
         Provide the output in a single, valid JSON object with two keys: "tailoredResume" and "coverLetter". Do not add any extra text or formatting like ```json.
         """
