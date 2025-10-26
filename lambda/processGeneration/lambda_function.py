@@ -131,61 +131,73 @@ def lambda_handler(event, context):
         **TASK:**
         1.  Generate a **Tailored Resume**: Strategically present the candidate's experience to maximize alignment with the job description.
 
+            **CRITICAL CONSTRAINT: The resume MUST fit on ONE PAGE (approximately 500-650 words total)**
+
+            To achieve this:
+            - Be concise and impactful - every word must add value
+            - Limit work experience to 3-4 bullet points per job
+            - Focus on most recent/relevant positions (last 5-7 years)
+            - Limit skills section to most relevant technologies
+            - Summary should be 2-3 sentences max
+            - Omit less relevant older positions if space is tight
+            - Prioritize quality over quantity
+
             Format as a professional ATS-friendly resume following this EXACT structure:
 
             **LINE 1:** [Candidate's Full Name]
             **LINE 2:** Email: [email] | Git: github.com/username | LinkedIn: linkedin.com/in/username
 
             **SUMMARY**
-            [2-3 sentences highlighting key qualifications relevant to the job]
+            [2-3 concise sentences, ~50-60 words total, highlighting key qualifications most relevant to job]
 
             **SKILLS**
-            [Group skills strategically to match job description categories]
-            - Use job description terminology for categories
-            - Include explicit skills from resume
-            - Add implicit skills derived from their experience (e.g., if they used React, they know JavaScript, component architecture, state management)
+            [Keep concise - 4-6 categories max, ~80-100 words total]
             - Prioritize skills mentioned in job description
+            - Use job description terminology for categories
             - Group related technologies together
+            - List only most relevant skills
 
-            Example format:
-            Programming Languages: [list technologies explicitly and implicitly used]
-            Frameworks & Libraries: [list based on actual projects]
-            Databases: [list what they've actually worked with]
-            Cloud & DevOps: [expand from their AWS/cloud experience - if they used Lambda, they understand serverless, if they deployed code, they understand CI/CD concepts]
-            Tools & Technologies: [list tools they've used or would naturally use given their experience]
+            Example format (adjust categories based on job requirements):
+            Programming Languages: [list 5-8 most relevant]
+            Frameworks & Tools: [list 5-8 most relevant]
+            Cloud & DevOps: [list 4-6 most relevant]
+            Databases: [list 2-4 most relevant]
+
+            Keep it scannable and focused - recruiters spend 6 seconds on first pass!
 
             **WORK EXPERIENCE**
+            [Include 2-3 most relevant positions, ~250-300 words total]
+
             Job Title, Company Name (Location) (Start Year - End Year or Present)
+            • [3-4 bullet points per position max]
+            • [Each bullet should be 1-2 lines max]
+            • [Focus on impact and results]
 
-            STRATEGIC BULLET POINT WRITING:
+            STRATEGIC BULLET POINT WRITING (BE CONCISE!):
             • Lead with accomplishments that most closely match job requirements
-            • Use strong action verbs: Architected, Spearheaded, Optimized, Delivered, Led, Implemented, Engineered
-            • Quantify impact when possible (use reasonable estimates if exact numbers aren't available)
-            • Expand on technical depth from actual work (e.g., "worked with AWS" → "Architected serverless solutions using AWS Lambda, S3, and DynamoDB")
-            • Connect work to job description needs (if job needs scalability, emphasize scalable solutions you built)
-            • Show progression and impact (delivered X which resulted in Y)
-            • Include technical keywords from job description naturally in bullet points
+            • Use strong action verbs: Architected, Spearheaded, Optimized, Delivered, Led, Engineered
+            • Quantify impact when possible (use reasonable estimates)
+            • Each bullet should be ONE powerful sentence (not multiple sentences)
+            • Include technical keywords from job description
 
-            Example transformations:
-            - Before: "Developed features using React"
-            - After: "Architected and delivered responsive UI components using React, optimizing performance and user experience"
+            Example (concise):
+            ✅ "Architected serverless solutions using AWS Lambda and DynamoDB, reducing infrastructure costs by 40%"
+            ❌ "Worked on AWS projects. Used Lambda for serverless functions. Also implemented DynamoDB. This helped reduce costs."
 
-            - Before: "Used AWS services"
-            - After: "Engineered cloud-native solutions leveraging AWS Lambda, S3, and DynamoDB, implementing serverless architecture for scalable deployments"
-
-            IMPORTANT: The date (Start Year - End Year) should be at the END of the job title line in parentheses.
-            Example: Software Developer, Request Finance (Paris, France) (2022 - Present)
-
-            [Repeat for each relevant position, prioritizing most recent and most relevant]
+            IMPORTANT:
+            - Date format: "Job Title, Company Name (Location) (YYYY - YYYY)"
+            - Only include last 5-7 years of experience (unless older roles are highly relevant)
+            - If candidate has 5+ roles, include only top 2-3 most relevant
 
             **CERTIFICATIONS**
+            [Only include if certifications exist AND are relevant to job. Keep to 1-2 lines max]
             • [Certification Name] ([Year])
-            [Only include if certifications exist in the master resume]
 
             **EDUCATION**
+            [Keep brief - 2-3 lines max, ~40-50 words]
             [Degree Name]
             [Institution Name], [Location] ([Start Year] - [End Year])
-            Relevant Coursework: [list if applicable]
+            [Only include coursework if HIGHLY relevant to job and space permits]
 
             IMPORTANT FORMATTING RULES:
             - Section headers (SUMMARY, SKILLS, etc.) must be in ALL CAPS
@@ -214,6 +226,18 @@ def lambda_handler(event, context):
             - Add technologies they've never touched ❌
             - Invent projects or experiences ❌
             - Falsify dates or companies ❌
+
+            **FINAL CHECK - ONE PAGE REQUIREMENT:**
+            Before finalizing, verify the resume is approximately 500-650 words total:
+            - Header: 2 lines
+            - Summary: 50-60 words (2-3 sentences)
+            - Skills: 80-100 words (4-6 categories)
+            - Work Experience: 250-300 words (2-3 positions, 3-4 bullets each)
+            - Certifications: 10-20 words (if applicable)
+            - Education: 40-50 words (2-3 lines)
+
+            If over word count: Prioritize most recent/relevant experience, remove older positions, shorten bullet points.
+            Remember: 1 page is NON-NEGOTIABLE for most positions under 10 years experience.
 
         2.  Generate a **Cover Letter**: Write a compelling, personalized cover letter that makes the hiring manager want to interview this candidate.
 
