@@ -2,6 +2,11 @@ import json
 import boto3
 import uuid
 import os
+import sys
+
+# Add auth module to path
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from auth import get_user_id_from_event, create_unauthorized_response, CORS_HEADERS
 
 s3_client = boto3.client('s3')
 dynamodb = boto3.resource('dynamodb')
@@ -11,18 +16,27 @@ BUCKET_NAME = os.environ.get('BUCKET_NAME')
 TABLE_NAME = os.environ.get('TABLE_NAME')
 
 def lambda_handler(event, context):
+    # ===== AUTHENTICATION CHECK =====
+    user_id = get_user_id_from_event(event)
+    if not user_id:
+        print("Authentication failed - no valid user_id")
+        return create_unauthorized_response("Authentication required")
+
+    print(f"Authenticated user: {user_id}")
+
     try:
         query_params = event.get('queryStringParameters', {})
         original_filename = query_params.get('fileName', 'unknown.pdf')
 
         file_id = str(uuid.uuid4())
-        # We prefix with the file_id to ensure filename uniqueness in S3
-        s3_key = f"{file_id}-{original_filename}"
+        # Include userId in S3 key for data isolation
+        s3_key = f"user-{user_id}/{file_id}-{original_filename}"
 
         table = dynamodb.Table(TABLE_NAME)
         table.put_item(
             Item={
                 'fileId': file_id,
+                'userId': user_id,  # Store userId for data isolation
                 'originalFilename': original_filename,
                 'processingStatus': 'PENDING'
             }
@@ -43,10 +57,7 @@ def lambda_handler(event, context):
 
         return {
             "statusCode": 200,
-            "headers": {
-                "Content-Type": "application/json",
-                "Access-Control-Allow-Origin": "*" # API Gateway will handle CORS more robustly
-            },
+            "headers": CORS_HEADERS,
             "body": json.dumps({
                 "uploadUrl": presigned_url,
                 "fileId": file_id,
@@ -57,6 +68,6 @@ def lambda_handler(event, context):
         print(f"Error: {e}")
         return {
             "statusCode": 500,
-            "headers": { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+            "headers": CORS_HEADERS,
             "body": json.dumps({"error": "Failed to generate URL"})
         }
