@@ -1,20 +1,18 @@
 import json
 import os
 import boto3
+import sys
 from decimal import Decimal
+
+# Add auth module to path
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from auth import get_user_id_from_event, create_unauthorized_response, create_forbidden_response, CORS_HEADERS
 
 # Initialize DynamoDB client
 dynamodb = boto3.resource('dynamodb')
 
 # Environment variables
 GENERATION_JOBS_TABLE = os.environ.get('GENERATION_JOBS_TABLE')
-
-# CORS headers
-CORS_HEADERS = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Methods": "OPTIONS,POST,GET"
-}
 
 # Helper function to convert Decimal to int/float for JSON serialization
 def convert_decimal(obj):
@@ -35,6 +33,14 @@ def lambda_handler(event, context):
     Returns the status and results of a generation job.
     Used by the frontend for polling.
     """
+    # ===== AUTHENTICATION CHECK =====
+    user_id = get_user_id_from_event(event)
+    if not user_id:
+        print("Authentication failed - no valid user_id")
+        return create_unauthorized_response("Authentication required")
+
+    print(f"Authenticated user: {user_id}")
+
     try:
         # Get jobId from query parameters
         params = event.get('queryStringParameters', {}) or {}
@@ -59,6 +65,13 @@ def lambda_handler(event, context):
             }
 
         item = response['Item']
+
+        # ===== AUTHORIZATION CHECK =====
+        # Verify the job belongs to the authenticated user
+        job_owner = item.get('userId')
+        if job_owner and job_owner != user_id:
+            print(f"User {user_id} tried to access job {job_id} owned by {job_owner}")
+            return create_forbidden_response("You don't have permission to access this job")
 
         # Convert Decimal objects to int/float
         item = convert_decimal(item)
