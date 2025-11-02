@@ -120,6 +120,7 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
     memorySize: 256,
     environment: {
         GENERATION_JOBS_TABLE: generationJobsTable.tableName,
+        SUMMARIES_TABLE: summariesTable.tableName, // For file ownership verification
         PROCESS_GENERATION_FUNCTION_NAME: 'ProcessGenerationLambda', // Will be updated after creation
     }
 });
