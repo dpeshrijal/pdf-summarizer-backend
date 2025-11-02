@@ -80,13 +80,24 @@ def lambda_handler(event, context):
         
         print(f"Processing master resume: {file_key}")
 
+        # Extract userId from S3 key path: user-{userId}/{fileId}-{filename}
+        # This ensures proper data isolation in Pinecone
+        user_id = None
+        if file_key.startswith('user-'):
+            user_id = file_key.split('/')[0].replace('user-', '')
+
+        if not user_id:
+            raise ValueError(f"Could not extract userId from S3 key: {file_key}")
+
+        print(f"Extracted userId: {user_id}")
+
         head_response = s3.head_object(Bucket=bucket_name, Key=file_key)
         metadata = head_response.get('Metadata', {})
         job_id = metadata.get('fileid')
 
         if not job_id:
             raise ValueError("'fileid' not found in S3 metadata.")
-        
+
         print(f"Retrieved fileId from metadata: {job_id}")
 
         download_path = f'/tmp/{job_id}.pdf'
@@ -113,7 +124,11 @@ def lambda_handler(event, context):
                 vectors_to_upsert.append({
                     "id": vector_id,
                     "values": embedding,
-                    "metadata": {"text": chunk, "original_file_id": job_id} # Storing original fileId in metadata
+                    "metadata": {
+                        "text": chunk,
+                        "original_file_id": job_id,
+                        "user_id": user_id  # Critical: Store userId for data isolation
+                    }
                 })
 
         if vectors_to_upsert:

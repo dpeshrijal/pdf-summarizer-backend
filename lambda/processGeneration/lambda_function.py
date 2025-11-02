@@ -64,6 +64,16 @@ def lambda_handler(event, context):
         # Get DynamoDB table
         table = dynamodb.Table(GENERATION_JOBS_TABLE)
 
+        # Get userId from summaries table for security filtering
+        summaries_table = dynamodb.Table(os.environ.get('SUMMARIES_TABLE'))
+        file_record = summaries_table.get_item(Key={'fileId': file_id})
+
+        if 'Item' not in file_record or 'userId' not in file_record['Item']:
+            raise ValueError(f"Could not find userId for fileId: {file_id}")
+
+        user_id = file_record['Item']['userId']
+        print(f"Retrieved userId: {user_id} for fileId: {file_id}")
+
         # 1. Create an embedding for the job description
         print("Creating embedding for job description...")
         query_embedding = genai.embed_content(
@@ -73,12 +83,18 @@ def lambda_handler(event, context):
         )['embedding']
 
         # 2. Query Pinecone to get the most relevant resume chunks
+        # IMPORTANT: Filter by BOTH fileId AND userId for security
         print("Querying Pinecone for relevant resume sections...")
         query_response = index.query(
             vector=query_embedding,
             top_k=5,
             include_metadata=True,
-            filter={"original_file_id": {"$eq": file_id}}
+            filter={
+                "$and": [
+                    {"original_file_id": {"$eq": file_id}},
+                    {"user_id": {"$eq": user_id}}
+                ]
+            }
         )
 
         if not query_response['matches']:
