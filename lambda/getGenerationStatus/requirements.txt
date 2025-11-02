@@ -1,1 +1,4 @@
-# No external dependencies - uses built-in boto3
+# Auth dependencies for JWT validation
+PyJWT==2.8.0
+cryptography==41.0.7
+requests==2.31.0
