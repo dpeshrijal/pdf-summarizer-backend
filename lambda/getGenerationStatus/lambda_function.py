@@ -1,11 +1,7 @@
 import json
 import os
 import boto3
-import sys
 from decimal import Decimal
-
-# Add auth module to path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from auth import get_user_id_from_event, create_unauthorized_response, create_forbidden_response, CORS_HEADERS
 
 # Initialize DynamoDB client
