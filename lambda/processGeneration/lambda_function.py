@@ -90,7 +90,7 @@ def lambda_handler(event, context):
 
         # 3. Construct the detailed prompt for Gemini
         prompt = f"""
-        You are an expert resume strategist and career advisor. Your task is to generate a highly competitive, ATS-optimized resume and cover letter that maximizes the candidate's chances of getting interviews.
+        You are an elite resume strategist and career advisor with expertise in ATS optimization and human psychology. Your mission: Generate a resume and cover letter that BOTH passes automated screening AND compels hiring managers to call this candidate immediately.
 
         **JOB DESCRIPTION:**
         ---
@@ -102,265 +102,277 @@ def lambda_handler(event, context):
         {resume_context}
         ---
 
-        **STRATEGIC TAILORING PHILOSOPHY:**
-        Your goal is to present the candidate in the STRONGEST possible light by:
-        1. Extracting implicit skills and expertise from their actual experience
-        2. Using strategic language that matches the job description's terminology
-        3. Highlighting transferable skills and relevant accomplishments
-        4. Positioning the candidate as an ideal fit through honest reframing
+        **DUAL OPTIMIZATION STRATEGY:**
+        This resume must win twice:
+        1. **BEAT THE ATS** - Match keywords, use standard formatting, mirror job terminology
+        2. **WOW THE HUMAN** - Sound natural, tell a compelling story, avoid AI/template language
 
-        **CRITICAL RULES - FOLLOW EXACTLY:**
+        **VOICE & STYLE (CRITICAL FOR HUMAN READERS):**
+        - Write like a confident professional, not a template or AI. Vary sentence structure.
+        - Use concrete, specific language. Ban these clichés: "results-driven," "dynamic," "passionate," "seasoned professional," "team player," "think outside the box"
+        - Eliminate filler words: "successfully," "very," "highly," "effectively," "efficiently" (unless genuinely needed)
+        - Active voice only. Strong, varied action verbs. Never repeat the same verb opener in consecutive bullets.
+        - Tense consistency: past roles = past tense; current role = present tense
+        - For resumes: No first person ("I," "my"). For cover letters: First person is fine but stay professional.
 
-        ✅ **DO (Strategic Optimization):**
-        - Extract implicit skills from explicit experience
-          * Tech: "used AWS Lambda" → serverless architecture, cloud-native development, event-driven design
-          * Healthcare: "administered medications" → medication management, patient safety protocols, drug interaction awareness
-          * Business: "managed projects" → project management, stakeholder coordination, resource allocation, risk mitigation
-          * Education: "taught courses" → curriculum development, student engagement, learning assessment, differentiated instruction
-          * Marketing: "ran campaigns" → campaign strategy, audience targeting, performance optimization, ROI analysis
-          * Finance: "prepared reports" → financial analysis, data visualization, forecasting, stakeholder communication
-        - Match job description terminology exactly (mirror their language and keywords)
-        - Expand on depth and breadth from actual experience
-        - Use strong action verbs that match the industry:
-          * Universal: Led, Delivered, Optimized, Achieved, Spearheaded, Implemented, Drove, Established
-          * Healthcare: Administered, Diagnosed, Treated, Counseled, Monitored, Assessed, Coordinated
-          * Business: Negotiated, Analyzed, Forecasted, Strategized, Executed, Optimized, Streamlined
-          * Education: Educated, Mentored, Facilitated, Developed, Assessed, Engaged, Differentiated
-          * Marketing: Launched, Executed, Optimized, Targeted, Converted, Scaled, Analyzed
-          * Finance: Analyzed, Forecasted, Audited, Reconciled, Modeled, Evaluated, Reported
-        - Quantify achievements wherever possible (use reasonable estimates based on context)
-        - Reframe responsibilities to highlight impact and alignment with job needs
-        - Connect related skills within the candidate's field and adjacent domains
-        - Emphasize learning agility, adaptability, and transferable skills when there are gaps
+        **ATS OPTIMIZATION (CRITICAL FOR GETTING THROUGH):**
+        - Use EXACT terminology from job description for: technical skills, tools, certifications, methodologies
+        - Mirror key phrases from job requirements in your bullets, but integrate naturally into strong sentences
+        - Prioritize job description keywords in SKILLS section (use their exact spelling/capitalization)
+        - Section headers MUST be standard: SUMMARY, SKILLS, WORK EXPERIENCE, CERTIFICATIONS, EDUCATION
+        - Job titles and company names must be prominent and consistently formatted
+        - Don't sacrifice readability for keywords—modern ATS penalizes keyword stuffing
 
-        ❌ **DO NOT (Fabrication):**
-        - Add technologies or tools the candidate has never used
-        - Invent job responsibilities that didn't exist
-        - Claim certifications not mentioned
-        - Create fictional projects or companies
-        - Add years of experience with technologies they haven't used
-        - Add medical procedures/medications never administered (healthcare)
-        - Add courses/subjects never taught (education)
-        - Add business deals/projects never worked on (business)
+        **STRATEGIC SKILL EXTRACTION (The Secret Sauce):**
+        Extract implicit skills from explicit experience—this is honest and powerful:
 
-        **TASK:**
-        1.  Generate a **Tailored Resume**: Strategically present the candidate's experience to maximize alignment with the job description.
+        **Tech/Software:**
+        - "used AWS Lambda" → serverless architecture, cloud-native development, event-driven systems, infrastructure as code
+        - "debugged production issues" → troubleshooting, root cause analysis, performance optimization, monitoring
+        - "reviewed code" → code quality standards, best practices, mentorship, architectural patterns
 
-            **CRITICAL CONSTRAINT: The resume MUST fit on ONE PAGE (approximately 500-650 words total)**
+        **Healthcare/Pharmacy:**
+        - "administered medications" → medication management, drug interactions, patient safety protocols, pharmacotherapy
+        - "counseled patients" → patient education, health literacy, medication adherence, therapeutic communication
+        - "worked with EHR systems" → healthcare IT, clinical workflows, data accuracy, regulatory compliance
 
-            To achieve this:
-            - Be concise and impactful - every word must add value
-            - Limit work experience to 3-4 bullet points per job
-            - Focus on most recent/relevant positions (last 5-7 years)
-            - Limit skills section to most relevant technologies
-            - Summary should be 2-3 sentences max
-            - Omit less relevant older positions if space is tight
-            - Prioritize quality over quantity
+        **Business/Finance:**
+        - "managed projects" → project management, stakeholder coordination, resource allocation, risk mitigation
+        - "prepared financial reports" → financial analysis, data visualization, forecasting, business intelligence
+        - "led meetings" → cross-functional leadership, communication, conflict resolution, decision-making
 
-            Format as a professional ATS-friendly resume following this EXACT structure:
+        **Education:**
+        - "taught courses" → curriculum development, instructional design, learning assessment, differentiated instruction
+        - "managed classroom" → classroom management, student engagement, behavioral strategies, inclusive practices
+        - "adapted lessons" → personalized learning, student-centered teaching, formative assessment, creative problem-solving
 
-            **LINE 1:** [Candidate's Full Name]
-            **LINE 2:** Email: [email] | Git: github.com/username | LinkedIn: linkedin.com/in/username
+        **Marketing/Sales:**
+        - "ran campaigns" → campaign strategy, audience targeting, A/B testing, ROI optimization, funnel analysis
+        - "created content" → content strategy, brand voice, storytelling, audience engagement, SEO principles
+        - "analyzed metrics" → data-driven marketing, performance analytics, conversion optimization, KPI tracking
 
-            **SUMMARY**
-            [2-3 concise sentences, ~50-60 words total, highlighting key qualifications most relevant to job]
+        **Universal Extraction Rules:**
+        ✅ Extract what they genuinely learned or did
+        ✅ Use industry-standard terminology for these skills
+        ✅ Connect related competencies within their field
+        ❌ Don't add technologies they never touched
+        ❌ Don't invent responsibilities that didn't exist
 
-            **SKILLS**
-            [Keep concise - 4-6 categories max, ~80-100 words total]
-            - Prioritize skills mentioned in job description
-            - Use job description terminology for categories
-            - Group related skills together
-            - List only most relevant skills
-            - Adapt categories to the field (see examples below)
+        **STRICT INTEGRITY RULES (NON-NEGOTIABLE):**
+        - NEVER add tools, technologies, or certifications not mentioned in resume context
+        - NEVER invent job responsibilities, projects, or achievements
+        - NEVER fabricate dates, companies, or credentials
+        - NEVER inflate years of experience with specific technologies
+        - Use reasonable estimates for quantification, but stay grounded in context
+        - If unsure whether something is true, DON'T include it
 
-            **ADAPT CATEGORIES TO FIELD:**
+        **TASK 1 — TAILORED RESUME (ONE PAGE ONLY, ~500–650 words):**
+        - Be selective: 2–3 roles, recent 5–7 years unless older is crucial.
+        - Max 3–4 bullets per role; one sentence per bullet.
+        - Summary 2–3 sentences; Skills ~80–100 words in 4–6 clear categories.
+        - Use numbers, scope, and outcomes. Avoid generic claims.
 
-            For Tech/Software roles:
-            Programming Languages: [list]
-            Frameworks & Tools: [list]
-            Cloud & DevOps: [list]
+        Produce the resume in this EXACT structure and formatting:
 
-            For Healthcare/Pharmacy roles:
-            Clinical Skills: [list relevant clinical competencies]
-            Medications & Therapies: [list drug classes, therapeutic areas]
-            Systems & Software: [pharmacy management systems, EHR platforms]
+        **LINE 1:** [Candidate's Full Name]
+        **LINE 2:** Email: [email] | Git: github.com/username | LinkedIn: linkedin.com/in/username
 
-            For Business/Finance roles:
-            Technical Skills: [Excel, SQL, BI tools, CRM systems]
-            Business Tools: [project management, analytics, communication platforms]
-            Analytical Skills: [financial modeling, forecasting, data analysis]
+        **SUMMARY**
+        [2-3 concise sentences, ~50-60 words total, focusing on the most job-relevant strengths. No clichés.]
 
-            For Education roles:
-            Teaching Methods: [pedagogical approaches, classroom management]
-            Subject Expertise: [specific subjects, grade levels, curriculum standards]
-            Educational Technology: [LMS platforms, educational software, digital tools]
+        **SKILLS**
+        [4-6 concise categories, ~80-100 words total. Use job terminology only where natural. Group related items.]
 
-            For Marketing/Sales roles:
-            Digital Marketing: [SEO, SEM, social media, content marketing]
-            Analytics & Tools: [Google Analytics, CRM, marketing automation]
-            Campaign Management: [email marketing, paid advertising, A/B testing]
+        **ADAPT CATEGORIES TO FIELD:**
+        For Tech/Software roles:
+        Programming Languages: [list]
+        Frameworks & Tools: [list]
+        Cloud & DevOps: [list]
 
-            For Other Professions:
-            Adapt categories to the specific field using job description terminology.
-            Common patterns: Technical Skills, Soft Skills, Industry Knowledge, Tools & Systems
+        For Healthcare/Pharmacy roles:
+        Clinical Skills: [list]
+        Medications & Therapies: [list]
+        Systems & Software: [list]
 
-            Keep it scannable and focused - recruiters spend 6 seconds on first pass!
+        For Business/Finance roles:
+        Technical Skills: [list]
+        Business Tools: [list]
+        Analytical Skills: [list]
 
-            **WORK EXPERIENCE**
-            [Include 2-3 most relevant positions, ~250-300 words total]
+        For Education roles:
+        Teaching Methods: [list]
+        Subject Expertise: [list]
+        Educational Technology: [list]
 
-            Job Title, Company Name (Location) (Start Year - End Year or Present)
-            • [3-4 bullet points per position max]
-            • [Each bullet should be 1-2 lines max]
-            • [Focus on impact and results]
+        For Marketing/Sales roles:
+        Digital Marketing: [list]
+        Analytics & Tools: [list]
+        Campaign Management: [list]
 
-            STRATEGIC BULLET POINT WRITING (BE CONCISE!):
-            • Lead with accomplishments that most closely match job requirements
-            • Use strong action verbs appropriate to the field (see earlier examples)
-            • Quantify impact when possible (use reasonable estimates)
-            • Each bullet should be ONE powerful sentence (not multiple sentences)
-            • Include keywords from job description
+        For Other Professions:
+        Use field-appropriate groupings (e.g., Technical Skills, Industry Knowledge, Tools & Systems).
 
-            Field-Specific Examples (concise format):
+        **WORK EXPERIENCE**
+        [2–3 most relevant roles, ~250–300 words total]
 
-            Tech/Software:
-            ✅ "Architected serverless solutions using AWS Lambda and DynamoDB, reducing infrastructure costs by 40%"
-            ❌ "Worked on AWS projects. Used Lambda. Also implemented DynamoDB. This helped reduce costs."
+        Job Title, Company Name (Location) (Start Year - End Year or Present)
+        • [3–4 bullets max per role; ONE sentence each]
+        • [Lead with the most job-relevant accomplishments first]
+        • [Each bullet must have: Action Verb + What You Did + Quantified Impact (when possible)]
 
-            Healthcare/Pharmacy:
-            ✅ "Counseled 50+ patients daily on medication management and drug interactions, improving adherence by 35%"
-            ❌ "Talked to patients about their medications. Helped them understand how to take them properly."
+        **BULLET WRITING FORMULA (HIGH-IMPACT):**
+        [Strong Verb] + [Specific Action with JD Keywords] + [Quantified Outcome/Scope]
 
-            Business/Finance:
-            ✅ "Led cross-functional team to deliver $2M cost reduction initiative, exceeding targets by 20%"
-            ❌ "Worked on cost-saving projects with various teams and helped save money for the company."
+        Examples showing PERFECT vs WEAK bullets:
 
-            Education:
-            ✅ "Developed and delivered engaging curriculum for 120+ students, improving test scores by 25%"
-            ❌ "Taught classes and created lesson plans. Students performed better on tests."
+        Tech/Software:
+        ✅ "Architected serverless ETL pipeline using AWS Lambda and DynamoDB, reducing infrastructure costs 40% while processing 50K+ daily transactions"
+        ✅ "Led migration of monolithic app to microservices on Kubernetes, improving deployment speed 10x and eliminating 90% of downtime"
+        ❌ "Worked on AWS projects using Lambda and DynamoDB to reduce costs"
+        ❌ "Successfully implemented cloud solutions"
 
-            Marketing/Sales:
-            ✅ "Launched digital marketing campaign generating 200K+ impressions and $500K revenue"
-            ❌ "Ran marketing campaigns on social media. Got lots of views and made sales."
+        Healthcare/Pharmacy:
+        ✅ "Counseled 50+ patients daily on medication management and drug interactions, improving adherence rates 35% through personalized education"
+        ✅ "Collaborated with physicians to optimize medication therapy for 200+ chronic disease patients, reducing adverse events by 28%"
+        ❌ "Talked to patients about medications"
+        ❌ "Provided excellent patient care"
 
-            IMPORTANT:
-            - Date format: "Job Title, Company Name (Location) (YYYY - YYYY)"
-            - Only include last 5-7 years of experience (unless older roles are highly relevant)
-            - If candidate has 5+ roles, include only top 2-3 most relevant
+        Business/Finance:
+        ✅ "Led cross-functional cost reduction initiative across 3 departments, delivering $2M in annual savings—20% above target"
+        ✅ "Built financial forecasting models in Excel and Tableau that improved budget accuracy by 45% and informed $10M in strategic decisions"
+        ❌ "Worked on cost-saving projects"
+        ❌ "Managed budgets and financial reports"
 
-            **CERTIFICATIONS**
-            [Only include if certifications exist AND are relevant to job. Keep to 1-2 lines max]
-            • [Certification Name] ([Year])
+        Education:
+        ✅ "Designed and delivered differentiated curriculum for 120+ students across 5 courses, raising average test scores 25% over two semesters"
+        ✅ "Implemented blended learning approach using Canvas LMS and adaptive tech, increasing student engagement metrics 40%"
+        ❌ "Taught classes and created lesson plans"
+        ❌ "Helped students learn better"
 
-            **EDUCATION**
-            [Keep brief - 2-3 lines max, ~40-50 words]
-            [Degree Name]
-            [Institution Name], [Location] ([Start Year] - [End Year])
-            [Only include coursework if HIGHLY relevant to job and space permits]
+        Marketing/Sales:
+        ✅ "Launched multi-channel digital campaign (email, social, paid search) reaching 200K+ prospects and generating $500K in qualified pipeline"
+        ✅ "Optimized conversion funnel through A/B testing and analytics, boosting lead-to-customer rate from 8% to 14% in 6 months"
+        ❌ "Ran marketing campaigns"
+        ❌ "Increased sales and engagement"
 
-            IMPORTANT FORMATTING RULES:
-            - Section headers (SUMMARY, SKILLS, etc.) must be in ALL CAPS
-            - Job titles should include company, location, and dates in format: "Title, Company (Location) (YYYY - YYYY)"
-            - Use bullet points (•) for all achievements and responsibilities
-            - Use powerful action verbs that match job description language
-            - Be specific and quantify achievements (use reasonable estimates if exact numbers unknown)
-            - Mirror job description keywords naturally throughout the resume
-            - Make every word count - this is a competitive application
+        **ACTION VERBS BY IMPACT (Use variety—never repeat):**
+        Leadership: Led, Directed, Managed, Coordinated, Spearheaded, Orchestrated
+        Creation: Built, Developed, Designed, Architected, Created, Established, Launched
+        Improvement: Optimized, Enhanced, Streamlined, Improved, Transformed, Modernized
+        Analysis: Analyzed, Assessed, Evaluated, Diagnosed, Identified, Investigated
+        Collaboration: Partnered, Collaborated, Coordinated, Facilitated, Aligned
+        Achievement: Delivered, Achieved, Exceeded, Generated, Drove, Produced
 
-            **STRATEGIC MINDSET:**
-            Think like a hiring manager reading this resume against the job description. Your goal is to make them think:
-            "This candidate is exactly what we're looking for!" while being 100% truthful.
+        **CERTIFICATIONS**
+        [Include only if real and relevant; 1–2 lines]
+        • [Certification Name] ([Year])
 
-            Extract maximum value from their actual experience across any field:
+        **EDUCATION**
+        [~40–50 words, 2–3 lines; coursework only if highly relevant]
+        [Degree Name]
+        [Institution Name], [Location] ([Start Year] - [End Year])
 
-            **Tech/Software:**
-            - If they deployed code → they understand deployment pipelines, DevOps practices, CI/CD
-            - If they used a framework → they understand the ecosystem, best practices, architecture patterns
-            - If they debugged issues → they have troubleshooting, problem-solving, analytical skills
+        **FORMATTING & CONSISTENCY RULES:**
+        - Section headers in ALL CAPS.
+        - Title line format exactly: "Title, Company (Location) (YYYY - YYYY)".
+        - Bullets start with • and remain one sentence.
+        - No dense keyword lists; write for readability and clarity.
 
-            **Healthcare:**
-            - If they administered medications → they understand pharmacology, drug interactions, patient safety
-            - If they counseled patients → they have communication, empathy, health education skills
-            - If they worked with systems → they have healthcare IT, EHR proficiency, workflow optimization
+        **ONE-PAGE CHECK (~500–650 words):**
+        - Header: 2 lines
+        - Summary: ~50–60 words
+        - Skills: ~80–100 words
+        - Experience: ~250–300 words
+        - Certifications (if any): ~10–20 words
+        - Education: ~40–50 words
+        If over limit: cut older/less relevant content and tighten bullets.
 
-            **Business:**
-            - If they managed projects → they have planning, coordination, stakeholder management skills
-            - If they prepared reports → they have analytical, communication, data interpretation skills
-            - If they worked cross-functionally → they have collaboration, negotiation, leadership skills
+        **TASK 2 — COVER LETTER (300–400 words):**
+        **Mission:** Make the hiring manager think "I need to talk to this person" within 30 seconds.
 
-            **Education:**
-            - If they taught courses → they have curriculum design, presentation, assessment skills
-            - If they managed classrooms → they have organization, conflict resolution, motivation skills
-            - If they adapted lessons → they have differentiation, creativity, student-centered approach
+        **STRUCTURE (4 paragraphs):**
 
-            **Marketing:**
-            - If they ran campaigns → they have strategy, execution, performance tracking skills
-            - If they created content → they have storytelling, audience understanding, brand alignment
-            - If they analyzed metrics → they have data-driven decision-making, optimization skills
+        **Paragraph 1 - Opening (2-3 sentences):**
+        - Name the specific role and where you saw it
+        - Give ONE concrete reason this opportunity interests you (reference something from the JD: company mission, specific project, technology, impact)
+        - Avoid: "I am writing to express my interest..." or "I am excited to apply..."
+        - Instead: Start with confidence and specificity
 
-            **Universal Principles:**
-            - If they solved a problem → they're a problem-solver who can handle similar challenges
-            - If they worked in a team → they have collaboration, communication, and teamwork skills
-            - If they delivered results → they have end-to-end ownership and execution capabilities
-            - If they adapted to change → they have agility, resilience, and learning orientation
+        Example openings:
+        ✅ "I'm applying for the Senior Software Engineer role on your Platform team. The opportunity to build scalable infrastructure supporting millions of users while working with modern cloud technologies aligns perfectly with my 5 years architecting high-traffic systems."
+        ✅ "Your Clinical Pharmacist opening caught my attention because of [Company]'s focus on medication therapy management and patient outcomes—work I've been passionate about throughout my 7 years in hospital pharmacy."
+        ❌ "I am writing to express my enthusiastic interest in this amazing opportunity at your innovative company."
 
-            HONESTY BOUNDARY:
-            - Extract and expand on implicit skills from actual work ✅
-            - Use strategic language and framing ✅
-            - Quantify with reasonable estimates ✅
-            - Add technologies/skills they've never used ❌
-            - Invent projects or experiences ❌
-            - Falsify dates, companies, or credentials ❌
+        **Paragraph 2 - Proof (3-4 sentences):**
+        - Pick the TOP 2 requirements from job description
+        - Give specific examples showing you've done this work (use numbers, technologies, scope)
+        - Mirror JD terminology but keep sentences natural
+        - This paragraph wins or loses the interview
 
-            **FINAL CHECK - ONE PAGE REQUIREMENT:**
-            Before finalizing, verify the resume is approximately 500-650 words total:
-            - Header: 2 lines
-            - Summary: 50-60 words (2-3 sentences)
-            - Skills: 80-100 words (4-6 categories)
-            - Work Experience: 250-300 words (2-3 positions, 3-4 bullets each)
-            - Certifications: 10-20 words (if applicable)
-            - Education: 40-50 words (2-3 lines)
+        Example:
+        ✅ "In my current role, I've led the migration of our monolithic application to microservices on Kubernetes, reducing deployment time from hours to minutes while eliminating 90% of production incidents. I also architected our serverless data pipeline using AWS Lambda and DynamoDB, which now processes 50K+ transactions daily at 40% lower cost than our previous infrastructure."
+        ❌ "I have extensive experience with cloud technologies and have successfully delivered many projects using best practices and innovative solutions."
 
-            If over word count: Prioritize most recent/relevant experience, remove older positions, shorten bullet points.
-            Remember: 1 page is NON-NEGOTIABLE for most positions under 10 years experience.
+        **Paragraph 3 - Fit & Approach (2-3 sentences):**
+        - Show how you work: collaboration, learning, ownership (pull language from JD's "ideal candidate" or "you are" sections)
+        - One brief, authentic insight about why this environment appeals to you
+        - Keep it grounded—no fluff about "passion" or "dream job"
 
-        2.  Generate a **Cover Letter**: Write a compelling, personalized cover letter that makes the hiring manager want to interview this candidate.
+        Example:
+        ✅ "I work best in cross-functional environments where I can partner with product and design to solve complex problems. Your mention of 'bias toward action' and 'iterative development' resonates—I've found quick feedback loops and data-driven iteration lead to better outcomes than lengthy planning cycles."
+        ❌ "I am a passionate team player who loves to think outside the box and bring innovative solutions to challenging problems."
 
-            COVER LETTER STRATEGY:
-            - Opening: Express genuine enthusiasm for the role and company, mention the specific position
-            - Body paragraph 1: Highlight 2-3 key experiences that directly align with the most important job requirements
-            - Body paragraph 2: Demonstrate cultural fit and why you're excited about this opportunity (based on job description language)
-            - Body paragraph 3: Show understanding of the company's challenges/goals (infer from job description) and how you can contribute
-            - Closing: Strong call to action expressing eagerness to discuss how you can contribute
+        **Paragraph 4 - Closing (2 sentences):**
+        - Brief, confident call to action
+        - Express genuine interest in discussing further
+        - NO clichés: avoid "thrilled," "passionate," "dream opportunity," "honored"
 
-            STRATEGIC APPROACH:
-            - Mirror language from job description (if they say "innovative," use "innovation")
-            - Show you understand their needs and have solved similar problems
-            - Be confident but not arrogant
-            - Make it about THEM (what you can do for the company) not just YOU
-            - Keep it concise (300-400 words)
-            - Use specific examples from actual experience that match their needs
-            - Adapt tone to field: technical precision (tech), empathy (healthcare), results-driven (business), student-focused (education)
+        Example:
+        ✅ "I'd welcome the chance to discuss how my experience with [specific tech/skill from JD] could contribute to [specific goal/project mentioned in JD]. I'm available for a conversation at your convenience."
+        ❌ "I would be absolutely thrilled and honored to have the opportunity to bring my passion and expertise to your amazing team. I look forward to hearing from you soon!"
 
-        **FINAL REMINDERS - UNIVERSAL APPROACH:**
-        - This system works for ALL professions: tech, healthcare, business, education, marketing, finance, and beyond
-        - Always adapt language, categories, and examples to match the specific field and job description
-        - The principles remain the same: extract implicit skills, use strategic language, quantify impact, maintain honesty
-        - Let the job description guide your choices for terminology, skills categories, and emphasis areas
-        - When in doubt, mirror the job description's language and structure
+        **COVER LETTER TONE RULES (CRITICAL):**
+        - Confident but humble. Specific but concise.
+        - Use first person ("I," "my"), but don't make every sentence about "I"
+        - Vary sentence structure: mix short and medium sentences
+        - ONE vivid example beats five generic claims
+        - If you can't be specific, don't write it
+        - Ban these phrases: "I am writing to," "I believe that," "I am confident that," "proven track record," "hit the ground running," "wear many hats"
+
+        **ATS NOTE FOR COVER LETTER:**
+        - Include 3-5 key terms from job description naturally in your examples
+        - Role title should appear at least once
+        - 2-3 technical skills/tools from requirements should be mentioned
+        - Keep format simple: no tables, no fancy formatting
 
         Provide the output in a single, valid JSON object with two keys: "tailoredResume" and "coverLetter". Do not add any extra text or formatting like ```json.
         """
 
-        # 4. Call the Gemini API to generate the documents
+        # 4. Call the Gemini API to generate the documents with optimized settings
         print(f"Generating documents with {MODEL_NAME}...")
-        response = generative_model.generate_content(prompt)
+        generation_config = genai.GenerationConfig(
+            temperature=0.7,  # Balance between consistency and creativity
+            top_p=0.9,       # Nucleus sampling for quality
+            top_k=40,        # Limit token selection for coherence
+        )
+        response = generative_model.generate_content(
+            prompt,
+            generation_config=generation_config
+        )
 
         # Clean up the response from Gemini
         cleaned_response_text = response.text.strip().replace('```json', '').replace('```', '')
 
         # Parse JSON
         final_json_output = json.loads(cleaned_response_text)
+
+        # Validate required keys exist
+        if 'tailoredResume' not in final_json_output or 'coverLetter' not in final_json_output:
+            raise ValueError("Generated output missing required keys (tailoredResume or coverLetter)")
+
+        # Validate content is not empty
+        if not final_json_output['tailoredResume'].strip() or not final_json_output['coverLetter'].strip():
+            raise ValueError("Generated output contains empty documents")
 
         print("Successfully generated documents.")
 
