@@ -17,7 +17,7 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
       cors: [
         {
           allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.POST, s3.HttpMethods.PUT],
-          allowedOrigins: ['http://localhost:3000', 'https://pdf-summarizer-frontend-five.vercel.app'], 
+          allowedOrigins: ['http://localhost:3000', 'https://pdf-summarizer-frontend-five.vercel.app', 'https://resumi.cv', 'https://www.resumi.cv'], 
           allowedHeaders: ['*'],
         },
       ],
