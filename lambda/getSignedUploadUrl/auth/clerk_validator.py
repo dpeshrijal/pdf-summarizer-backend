@@ -11,8 +11,8 @@ import requests
 from functools import lru_cache
 from typing import Optional, Dict, Any
 
-# Clerk domain - update this with your actual Clerk domain
-CLERK_DOMAIN = "advanced-pony-6.clerk.accounts.dev"
+# Clerk domain - PRODUCTION
+CLERK_DOMAIN = "clerk.resumi.cv"
 CLERK_JWKS_URL = f"https://{CLERK_DOMAIN}/.well-known/jwks.json"
 
 # CORS headers for all responses
