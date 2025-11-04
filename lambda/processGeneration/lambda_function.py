@@ -411,7 +411,8 @@ def lambda_handler(event, context):
         "degree": "string",
         "institution": "string",
         "location": "string or null",
-        "graduationYear": "string"
+        "graduationYear": "string",
+        "coursework": ["Course 1", "Course 2"] or null (only if relevant courses mentioned in master resume)
       }}
     ],
     "volunteerExperience": [
@@ -485,9 +486,11 @@ def lambda_handler(event, context):
    - Select 2-3 most relevant roles
    - ONE job title per position (most relevant/senior)
    - Format dates: "Mon YYYY" (e.g. "Jan 2021", "Present")
-   - 3-4 achievements per role
+   - **MINIMUM 4-5 achievements per role** (use more if only 1-2 jobs total to maximize page usage)
+   - If candidate has only 1-2 work experiences, include 5-6 achievements each to fully utilize space
    - Each achievement: Action verb + What + Quantified impact
    - Order achievements by relevance to job description
+   - Expand on responsibilities and accomplishments to showcase full scope of work
 
 6. **PROJECTS** (if present in master resume - common for developers, designers, students):
    - Include 2-4 most relevant projects
@@ -514,6 +517,9 @@ def lambda_handler(event, context):
 10. **EDUCATION**:
    - Include all degrees from master resume
    - Format: Degree name, Institution, Location (if available), Year
+   - **Include relevant coursework** if mentioned in master resume (especially useful for students/recent grads)
+   - Select 3-5 most relevant courses to the job description
+   - Helps fill space while showcasing relevant knowledge
 
 11. **VOLUNTEER EXPERIENCE** (if present - shows character and community involvement):
    - Include significant volunteer roles
