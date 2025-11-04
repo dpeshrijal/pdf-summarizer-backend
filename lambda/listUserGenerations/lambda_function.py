@@ -51,10 +51,16 @@ def lambda_handler(event, context):
                 'jobTitle': item.get('jobTitle', 'Unknown Position'),
                 'completedAt': decimal_to_int(item.get('completedAt')),
                 'createdAt': decimal_to_int(item.get('createdAt')),
-                'tailoredResume': item.get('tailoredResume'),
-                'coverLetter': item.get('coverLetter'),
                 'fileId': item.get('fileId')
             }
+            # Add structured data if available (new format)
+            if 'structuredData' in item:
+                generation['structuredData'] = item.get('structuredData')
+            # Add old format fields for backward compatibility
+            if 'tailoredResume' in item:
+                generation['tailoredResume'] = item.get('tailoredResume')
+            if 'coverLetter' in item:
+                generation['coverLetter'] = item.get('coverLetter')
             generations.append(generation)
 
         # Sort by completedAt (most recent first)

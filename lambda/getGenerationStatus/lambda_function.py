@@ -80,6 +80,10 @@ def lambda_handler(event, context):
         }
 
         if item['status'] == 'COMPLETED':
+            # New structured format (preferred)
+            if 'structuredData' in item:
+                result['structuredData'] = item.get('structuredData')
+            # Old text format (backward compatibility)
             result['tailoredResume'] = item.get('tailoredResume', '')
             result['coverLetter'] = item.get('coverLetter', '')
             result['completedAt'] = item.get('completedAt')
