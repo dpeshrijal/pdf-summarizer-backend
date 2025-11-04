@@ -151,7 +151,7 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
         BUCKET_NAME: uploadsBucket.bucketName,
         GENERATION_JOBS_TABLE: generationJobsTable.tableName,
         SUMMARIES_TABLE: summariesTable.tableName,  // Needed to fetch userId for security
-        MODEL_NAME: 'gemini-2.5-flash', // Can be changed to gemini-2.5-pro
+        MODEL_NAME: 'gemini-2.5-pro', // Main model for high-quality resume generation (flash-lite used only for job/company extraction)
     }
 });
 

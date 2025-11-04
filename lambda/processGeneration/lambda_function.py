@@ -14,7 +14,7 @@ dynamodb = boto3.resource('dynamodb')
 
 # Environment variables
 GENERATION_JOBS_TABLE = os.environ.get('GENERATION_JOBS_TABLE')
-MODEL_NAME = os.environ.get('MODEL_NAME', 'gemini-2.5-flash')  # Changed to Flash for faster JSON generation
+MODEL_NAME = os.environ.get('MODEL_NAME', 'gemini-2.5-pro')  # Main model for resume generation
 
 def get_ssm_parameter(parameter_name):
     """Helper function to get a SecureString parameter from SSM."""
@@ -77,12 +77,18 @@ def validate_structured_output(data):
     if errors:
         raise ValueError("; ".join(errors))
 
-    # Validate contact information
+    # Validate contact information (only name and email are required)
     contact = resume['contact']
-    required_contact_fields = ['name', 'email', 'phone']
+    required_contact_fields = ['name', 'email']
     for field in required_contact_fields:
         if field not in contact or not contact[field]:
-            errors.append(f"Contact missing '{field}' field")
+            errors.append(f"Contact missing required '{field}' field")
+
+    # Phone, linkedin, github, location are all optional - just ensure they're strings if present
+    optional_contact_fields = ['phone', 'linkedin', 'github', 'location']
+    for field in optional_contact_fields:
+        if field in contact and contact[field] is not None and not isinstance(contact[field], str):
+            errors.append(f"Contact '{field}' must be a string if provided")
 
     # Ensure arrays are actually arrays
     if not isinstance(resume['skills'], list):
@@ -148,7 +154,7 @@ If you cannot find the information, use "Unknown Company" or "Unknown Position".
 Job Description:
 {job_description[:1500]}"""
 
-        lite_model = genai.GenerativeModel('gemini-2.0-flash-lite')
+        lite_model = genai.GenerativeModel('gemini-2.5-flash-lite')
         extraction_response = lite_model.generate_content(
             extraction_prompt,
             generation_config={
