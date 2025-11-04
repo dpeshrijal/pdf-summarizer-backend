@@ -11,9 +11,9 @@ import requests
 from functools import lru_cache
 from typing import Optional, Dict, Any
 
-# Clerk domain - PRODUCTION
-CLERK_DOMAIN = "clerk.resumi.cv"
-CLERK_JWKS_URL = f"https://{CLERK_DOMAIN}/.well-known/jwks.json"
+# Clerk domains - Support both TEST and PRODUCTION
+CLERK_PRODUCTION_DOMAIN = "clerk.resumi.cv"
+CLERK_TEST_DOMAIN = "advanced-pony-6.accounts.dev"
 
 # CORS headers for all responses
 CORS_HEADERS = {
@@ -23,21 +23,26 @@ CORS_HEADERS = {
 }
 
 
-@lru_cache(maxsize=1)
-def get_clerk_jwks():
+@lru_cache(maxsize=2)
+def get_clerk_jwks(domain: str):
     """
     Fetch Clerk's public keys (JWKS) for JWT verification.
     Cached to avoid repeated requests.
+
+    Args:
+        domain: Clerk domain (production or test)
 
     Returns:
         dict: JWKS (JSON Web Key Set) from Clerk
     """
     try:
-        response = requests.get(CLERK_JWKS_URL, timeout=5)
+        jwks_url = f"https://{domain}/.well-known/jwks.json"
+        print(f"Fetching JWKS from: {jwks_url}")
+        response = requests.get(jwks_url, timeout=5)
         response.raise_for_status()
         return response.json()
     except Exception as e:
-        print(f"Error fetching Clerk JWKS: {str(e)}")
+        print(f"Error fetching Clerk JWKS from {domain}: {str(e)}")
         return None
 
 
