@@ -172,6 +172,20 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
     }
 });
 
+    // New: List User Generations Lambda (for history)
+    const listUserGenerationsLambda = new PythonFunction(this, 'ListUserGenerationsLambda', {
+    runtime: lambda.Runtime.PYTHON_3_12,
+    entry: 'lambda/listUserGenerations',
+    index: 'lambda_function.py',
+    handler: 'lambda_handler',
+    role: lambdaRole,
+    timeout: cdk.Duration.seconds(10),
+    memorySize: 256,
+    environment: {
+        GENERATION_JOBS_TABLE: generationJobsTable.tableName,
+    }
+});
+
     // 5. Define the API Gateway
     const api = new apigateway.RestApi(this, 'PdfSummarizerApi', {
       defaultCorsPreflightOptions: {
@@ -188,6 +202,7 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
     // New async generation endpoints
     api.root.resourceForPath('start-generation').addMethod('POST', new apigateway.LambdaIntegration(startGenerationLambda));
     api.root.resourceForPath('get-generation-status').addMethod('GET', new apigateway.LambdaIntegration(getGenerationStatusLambda));
+    api.root.resourceForPath('list-user-generations').addMethod('GET', new apigateway.LambdaIntegration(listUserGenerationsLambda));
 
     // 6. Output the new API URL
     new cdk.CfnOutput(this, 'ApiGatewayUrl', {

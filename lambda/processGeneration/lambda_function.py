@@ -75,7 +75,30 @@ def lambda_handler(event, context):
         user_id = file_record['Item']['userId']
         print(f"Retrieved userId: {user_id} for fileId: {file_id}")
 
-        # 1. Create an embedding for the job description
+        # 1. Extract company name from job description using Gemini
+        print("Extracting company name from job description...")
+        company_name = "Unknown Company"
+        try:
+            extraction_prompt = f"""Extract ONLY the company name from this job description.
+Return just the company name, nothing else. If you cannot find a company name, return "Unknown Company".
+
+Job Description:
+{job_description[:1000]}"""  # Only use first 1000 chars for speed
+
+            extraction_response = generative_model.generate_content(
+                extraction_prompt,
+                generation_config={
+                    "temperature": 0.1,  # Low temperature for factual extraction
+                    "max_output_tokens": 50,
+                }
+            )
+            company_name = extraction_response.text.strip()
+            print(f"Extracted company name: {company_name}")
+        except Exception as e:
+            print(f"Error extracting company name: {e}")
+            company_name = "Unknown Company"
+
+        # 2. Create an embedding for the job description
         print("Creating embedding for job description...")
         query_embedding = genai.embed_content(
             model="models/text-embedding-004",
@@ -432,15 +455,18 @@ def lambda_handler(event, context):
         # 5. Update DynamoDB with COMPLETED status and results
         table.update_item(
             Key={'jobId': job_id},
-            UpdateExpression='SET #status = :status, tailoredResume = :resume, coverLetter = :coverLetter, completedAt = :completedAt',
+            UpdateExpression='SET #status = :status, tailoredResume = :resume, coverLetter = :coverLetter, completedAt = :completedAt, companyName = :companyName, #ttl = :ttl',
             ExpressionAttributeNames={
-                '#status': 'status'
+                '#status': 'status',
+                '#ttl': 'ttl'
             },
             ExpressionAttributeValues={
                 ':status': 'COMPLETED',
                 ':resume': final_json_output['tailoredResume'],
                 ':coverLetter': final_json_output['coverLetter'],
-                ':completedAt': int(context.get_remaining_time_in_millis() / 1000) if context else 0
+                ':completedAt': int(time.time()),
+                ':companyName': company_name,
+                ':ttl': int(time.time()) + (365 * 24 * 60 * 60)  # Keep for 1 year instead of 24 hours
             }
         )
 
