@@ -1,5 +1,6 @@
 import json
 import os
+import time
 import boto3
 import google.generativeai as genai
 from pinecone import Pinecone
@@ -82,23 +83,46 @@ def lambda_handler(event, context):
             task_type="RETRIEVAL_QUERY"
         )['embedding']
 
-        # 2. Query Pinecone to get the most relevant resume chunks
+        # 2. Query Pinecone to get the most relevant resume chunks with retry logic
         # IMPORTANT: Filter by BOTH fileId AND userId for security
         print("Querying Pinecone for relevant resume sections...")
-        query_response = index.query(
-            vector=query_embedding,
-            top_k=5,
-            include_metadata=True,
-            filter={
-                "$and": [
-                    {"original_file_id": {"$eq": file_id}},
-                    {"user_id": {"$eq": user_id}}
-                ]
-            }
-        )
 
-        if not query_response['matches']:
-            raise ValueError("Could not find any relevant sections in the master resume for this job description.")
+        max_retries = 2  # Try twice total (initial + 1 retry)
+        query_response = None
+
+        for attempt in range(max_retries):
+            try:
+                print(f"Pinecone query attempt {attempt + 1}/{max_retries}...")
+                query_response = index.query(
+                    vector=query_embedding,
+                    top_k=5,
+                    include_metadata=True,
+                    filter={
+                        "$and": [
+                            {"original_file_id": {"$eq": file_id}},
+                            {"user_id": {"$eq": user_id}}
+                        ]
+                    }
+                )
+
+                if query_response['matches']:
+                    print(f"Successfully found {len(query_response['matches'])} matches on attempt {attempt + 1}")
+                    break  # Success! Exit retry loop
+                else:
+                    print(f"No matches found on attempt {attempt + 1}")
+                    if attempt < max_retries - 1:
+                        print("Retrying Pinecone query...")
+                        time.sleep(1)  # Brief pause before retry
+            except Exception as e:
+                print(f"Error during Pinecone query attempt {attempt + 1}: {str(e)}")
+                if attempt < max_retries - 1:
+                    print("Retrying after error...")
+                    time.sleep(1)
+                else:
+                    raise
+
+        if not query_response or not query_response['matches']:
+            raise ValueError("Could not find any relevant sections in the master resume for this job description after retrying.")
 
         context_chunks = [match['metadata']['text'] for match in query_response['matches']]
         resume_context = "\n---\n".join(context_chunks)
