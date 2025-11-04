@@ -109,6 +109,19 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
         }
     });
 
+    const listUserResumesLambda = new PythonFunction(this, 'ListUserResumesLambda', {
+        runtime: lambda.Runtime.PYTHON_3_12,
+        entry: 'lambda/listUserResumes',
+        index: 'lambda_function.py',
+        handler: 'lambda_handler',
+        role: lambdaRole,
+        timeout: cdk.Duration.seconds(10),
+        memorySize: 256,
+        environment: {
+            TABLE_NAME: summariesTable.tableName,
+        }
+    });
+
     // New: Start Generation Lambda (returns immediately with jobId)
     const startGenerationLambda = new PythonFunction(this, 'StartGenerationLambda', {
     runtime: lambda.Runtime.PYTHON_3_12,
@@ -170,6 +183,7 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
     // Create API endpoints and link them to our Lambdas
     api.root.resourceForPath('get-upload-url').addMethod('GET', new apigateway.LambdaIntegration(getSignedUrlLambda));
     api.root.resourceForPath('get-summary-status').addMethod('GET', new apigateway.LambdaIntegration(getSummaryStatusLambda));
+    api.root.resourceForPath('list-user-resumes').addMethod('GET', new apigateway.LambdaIntegration(listUserResumesLambda));
 
     // New async generation endpoints
     api.root.resourceForPath('start-generation').addMethod('POST', new apigateway.LambdaIntegration(startGenerationLambda));
