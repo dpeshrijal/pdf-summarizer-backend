@@ -1,11 +1,18 @@
 import json
 import boto3
 import os
+from decimal import Decimal
 from auth import get_user_id_from_event, create_unauthorized_response, CORS_HEADERS
 
 dynamodb = boto3.resource('dynamodb')
 GENERATION_JOBS_TABLE = os.environ.get('GENERATION_JOBS_TABLE')
 table = dynamodb.Table(GENERATION_JOBS_TABLE)
+
+def decimal_to_int(obj):
+    """Convert Decimal types to int for JSON serialization"""
+    if isinstance(obj, Decimal):
+        return int(obj)
+    return obj
 
 def lambda_handler(event, context):
     """
@@ -42,8 +49,8 @@ def lambda_handler(event, context):
                 'jobId': item.get('jobId'),
                 'companyName': item.get('companyName', 'Unknown Company'),
                 'jobTitle': item.get('jobTitle', 'Unknown Position'),
-                'completedAt': item.get('completedAt'),
-                'createdAt': item.get('createdAt'),
+                'completedAt': decimal_to_int(item.get('completedAt')),
+                'createdAt': decimal_to_int(item.get('createdAt')),
                 'tailoredResume': item.get('tailoredResume'),
                 'coverLetter': item.get('coverLetter'),
                 'fileId': item.get('fileId')
