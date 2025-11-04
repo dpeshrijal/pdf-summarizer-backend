@@ -207,6 +207,30 @@ def validate_structured_output(data):
         if 'paragraphs' in cover_letter and not isinstance(cover_letter['paragraphs'], list):
             errors.append("Cover letter 'paragraphs' must be an array")
 
+    # Validate match score structure
+    if 'matchScore' not in data:
+        errors.append("Missing 'matchScore' field")
+    else:
+        match_score = data['matchScore']
+        required_score_fields = ['overallScore', 'skillsMatch', 'experienceMatch', 'educationMatch', 'summary', 'strengths', 'gaps']
+        for field in required_score_fields:
+            if field not in match_score:
+                errors.append(f"Match score missing '{field}' field")
+
+        # Validate score ranges (0-100)
+        score_fields = ['overallScore', 'skillsMatch', 'experienceMatch', 'educationMatch']
+        for field in score_fields:
+            if field in match_score:
+                score = match_score[field]
+                if not isinstance(score, (int, float)) or score < 0 or score > 100:
+                    errors.append(f"Match score '{field}' must be a number between 0-100")
+
+        # Validate arrays
+        if 'strengths' in match_score and not isinstance(match_score['strengths'], list):
+            errors.append("Match score 'strengths' must be an array")
+        if 'gaps' in match_score and not isinstance(match_score['gaps'], list):
+            errors.append("Match score 'gaps' must be an array")
+
     if errors:
         raise ValueError("; ".join(errors))
 
@@ -449,6 +473,22 @@ def lambda_handler(event, context):
       "string (fit/approach paragraph)",
       "string (closing paragraph)"
     ]
+  }},
+  "matchScore": {{
+    "overallScore": 85 (integer 0-100, overall match percentage),
+    "skillsMatch": 90 (integer 0-100, how well skills align),
+    "experienceMatch": 80 (integer 0-100, how relevant experience is),
+    "educationMatch": 85 (integer 0-100, education requirements match),
+    "summary": "string (2-3 sentences explaining the match score)",
+    "strengths": [
+      "string (key strength 1: what matches well)",
+      "string (key strength 2)",
+      "string (key strength 3)"
+    ],
+    "gaps": [
+      "string (gap 1: what's missing or weak)",
+      "string (gap 2)"
+    ]
   }}
 }}
 ```
@@ -544,6 +584,28 @@ def lambda_handler(event, context):
    - Closing: Call to action, express interest in discussing
    - Natural, conversational tone
    - Use first person but vary sentence structure
+
+15. **MATCH SCORE** (ATS Compatibility Analysis):
+   - **Overall Score (0-100)**: Comprehensive match percentage
+     * 90-100: Excellent match, highly qualified
+     * 75-89: Strong match, well qualified
+     * 60-74: Good match, qualified with some gaps
+     * 40-59: Moderate match, missing key requirements
+     * 0-39: Weak match, significant gaps
+   - **Skills Match**: Compare candidate's skills vs job requirements
+     * Count overlapping technical/professional skills
+     * Consider skill level and relevance
+   - **Experience Match**: Years of experience and role relevance
+     * Does experience level match requirements?
+     * Are past roles related to target position?
+   - **Education Match**: Education requirements alignment
+     * Degree level and field match
+     * Certifications and training
+   - **Summary**: 2-3 sentences explaining the score objectively
+   - **Strengths**: 3-5 specific areas where candidate excels
+   - **Gaps**: 1-3 areas where candidate may be weaker or missing requirements
+     * Be honest but constructive
+     * If score >85%, gaps can be minor or "none identified"
 
 **JOB DESCRIPTION:**
 ---
