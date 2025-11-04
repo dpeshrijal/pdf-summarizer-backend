@@ -231,10 +231,23 @@ def lambda_handler(event, context):
         **WORK EXPERIENCE**
         [2–3 most relevant roles, ~250–300 words total]
 
-        Job Title, Company Name (Location) (Start Year - End Year or Present)
+        [SINGLE Most Relevant Job Title], Company Name (Location) (Start Year - End Year or Present)
         • [3–4 bullets max per role; ONE sentence each]
         • [Lead with the most job-relevant accomplishments first]
         • [Each bullet must have: Action Verb + What You Did + Quantified Impact (when possible)]
+
+        **CRITICAL JOB TITLE RULE:**
+        - Pick ONE SINGLE job title that is most relevant to the target role
+        - If the candidate held multiple titles at the same company, choose the most senior or most relevant one
+        - NEVER combine multiple titles with slashes (e.g., "Developer / Researcher")
+        - Keep titles concise and industry-standard (e.g., "Full Stack Developer" NOT "Full Stack Developer / Undergraduate Researcher")
+        - The goal is clarity and professionalism - hiring managers should instantly understand the role
+
+        **DATE FORMATTING RULE:**
+        - Use "Mon YYYY" format for dates (e.g., "Jan 2021", "May 2022", "Present")
+        - Month abbreviations: Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec
+        - NEVER use all caps (e.g., "MAY 2021" is WRONG, use "May 2021")
+        - Example: "Full Stack Developer, Google (Jan 2021 - May 2023)"
 
         **BULLET WRITING FORMULA (HIGH-IMPACT):**
         [Strong Verb] + [Specific Action with JD Keywords] + [Quantified Outcome/Scope]
