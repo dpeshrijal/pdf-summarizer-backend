@@ -41,6 +41,7 @@ def lambda_handler(event, context):
             generation = {
                 'jobId': item.get('jobId'),
                 'companyName': item.get('companyName', 'Unknown Company'),
+                'jobTitle': item.get('jobTitle', 'Unknown Position'),
                 'completedAt': item.get('completedAt'),
                 'createdAt': item.get('createdAt'),
                 'tailoredResume': item.get('tailoredResume'),

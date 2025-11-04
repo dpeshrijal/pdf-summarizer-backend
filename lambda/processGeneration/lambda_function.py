@@ -75,28 +75,44 @@ def lambda_handler(event, context):
         user_id = file_record['Item']['userId']
         print(f"Retrieved userId: {user_id} for fileId: {file_id}")
 
-        # 1. Extract company name from job description using Gemini
-        print("Extracting company name from job description...")
+        # 1. Extract company name and job title from job description using Gemini
+        print("Extracting company name and job title from job description...")
         company_name = "Unknown Company"
+        job_title = "Unknown Position"
         try:
-            extraction_prompt = f"""Extract ONLY the company name from this job description.
-Return just the company name, nothing else. If you cannot find a company name, return "Unknown Company".
+            extraction_prompt = f"""Extract the company name and job title from this job description.
+Return ONLY in this exact format:
+Company: [company name]
+Position: [job title]
+
+If you cannot find the information, use "Unknown Company" or "Unknown Position".
 
 Job Description:
-{job_description[:1000]}"""  # Only use first 1000 chars for speed
+{job_description[:1500]}"""  # Use first 1500 chars for speed
 
             extraction_response = generative_model.generate_content(
                 extraction_prompt,
                 generation_config={
                     "temperature": 0.1,  # Low temperature for factual extraction
-                    "max_output_tokens": 50,
+                    "max_output_tokens": 100,
                 }
             )
-            company_name = extraction_response.text.strip()
-            print(f"Extracted company name: {company_name}")
+
+            # Parse the response
+            response_text = extraction_response.text.strip()
+            print(f"Extraction response: {response_text}")
+
+            for line in response_text.split('\n'):
+                if line.startswith('Company:'):
+                    company_name = line.replace('Company:', '').strip()
+                elif line.startswith('Position:'):
+                    job_title = line.replace('Position:', '').strip()
+
+            print(f"Extracted company: {company_name}, position: {job_title}")
         except Exception as e:
-            print(f"Error extracting company name: {e}")
+            print(f"Error extracting company/position: {e}")
             company_name = "Unknown Company"
+            job_title = "Unknown Position"
 
         # 2. Create an embedding for the job description
         print("Creating embedding for job description...")
@@ -455,7 +471,7 @@ Job Description:
         # 5. Update DynamoDB with COMPLETED status and results
         table.update_item(
             Key={'jobId': job_id},
-            UpdateExpression='SET #status = :status, tailoredResume = :resume, coverLetter = :coverLetter, completedAt = :completedAt, companyName = :companyName, #ttl = :ttl',
+            UpdateExpression='SET #status = :status, tailoredResume = :resume, coverLetter = :coverLetter, completedAt = :completedAt, companyName = :companyName, jobTitle = :jobTitle, #ttl = :ttl',
             ExpressionAttributeNames={
                 '#status': 'status',
                 '#ttl': 'ttl'
@@ -466,6 +482,7 @@ Job Description:
                 ':coverLetter': final_json_output['coverLetter'],
                 ':completedAt': int(time.time()),
                 ':companyName': company_name,
+                ':jobTitle': job_title,
                 ':ttl': int(time.time()) + (365 * 24 * 60 * 60)  # Keep for 1 year instead of 24 hours
             }
         )
