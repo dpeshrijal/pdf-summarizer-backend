@@ -49,6 +49,7 @@ def get_clerk_jwks(domain: str):
 def get_signing_key(token: str) -> Optional[str]:
     """
     Extract the public key from Clerk JWKS that matches the token's key ID.
+    Tries both production and test domains.
 
     Args:
         token: JWT token string
@@ -65,18 +66,21 @@ def get_signing_key(token: str) -> Optional[str]:
             print("No 'kid' found in token header")
             return None
 
-        # Get JWKS from Clerk
-        jwks = get_clerk_jwks()
-        if not jwks:
-            return None
+        # Try both production and test domains
+        for domain in [CLERK_PRODUCTION_DOMAIN, CLERK_TEST_DOMAIN]:
+            print(f"Trying domain: {domain}")
+            jwks = get_clerk_jwks(domain)
+            if not jwks:
+                continue
 
-        # Find the matching key
-        for key in jwks.get('keys', []):
-            if key.get('kid') == kid:
-                # Convert JWK to PEM format
-                return jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(key))
+            # Find the matching key
+            for key in jwks.get('keys', []):
+                if key.get('kid') == kid:
+                    print(f"Found matching key in domain: {domain}")
+                    # Convert JWK to PEM format
+                    return jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(key))
 
-        print(f"No matching key found for kid: {kid}")
+        print(f"No matching key found for kid: {kid} in any domain")
         return None
 
     except Exception as e:

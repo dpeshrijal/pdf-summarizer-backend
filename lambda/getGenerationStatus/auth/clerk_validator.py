@@ -11,9 +11,9 @@ import requests
 from functools import lru_cache
 from typing import Optional, Dict, Any
 
-# Clerk domain - update this with your actual Clerk domain
-CLERK_DOMAIN = "clerk.resumi.cv"
-CLERK_JWKS_URL = f"https://{CLERK_DOMAIN}/.well-known/jwks.json"
+# Clerk domains - Support both TEST and PRODUCTION
+CLERK_PRODUCTION_DOMAIN = "clerk.resumi.cv"
+CLERK_TEST_DOMAIN = "advanced-pony-6.accounts.dev"
 
 # CORS headers for all responses
 CORS_HEADERS = {
@@ -23,27 +23,33 @@ CORS_HEADERS = {
 }
 
 
-@lru_cache(maxsize=1)
-def get_clerk_jwks():
+@lru_cache(maxsize=2)
+def get_clerk_jwks(domain: str):
     """
     Fetch Clerk's public keys (JWKS) for JWT verification.
     Cached to avoid repeated requests.
+
+    Args:
+        domain: Clerk domain (production or test)
 
     Returns:
         dict: JWKS (JSON Web Key Set) from Clerk
     """
     try:
-        response = requests.get(CLERK_JWKS_URL, timeout=5)
+        jwks_url = f"https://{domain}/.well-known/jwks.json"
+        print(f"Fetching JWKS from: {jwks_url}")
+        response = requests.get(jwks_url, timeout=5)
         response.raise_for_status()
         return response.json()
     except Exception as e:
-        print(f"Error fetching Clerk JWKS: {str(e)}")
+        print(f"Error fetching Clerk JWKS from {domain}: {str(e)}")
         return None
 
 
 def get_signing_key(token: str) -> Optional[str]:
     """
     Extract the public key from Clerk JWKS that matches the token's key ID.
+    Tries both production and test domains.
 
     Args:
         token: JWT token string
@@ -60,18 +66,21 @@ def get_signing_key(token: str) -> Optional[str]:
             print("No 'kid' found in token header")
             return None
 
-        # Get JWKS from Clerk
-        jwks = get_clerk_jwks()
-        if not jwks:
-            return None
+        # Try both production and test domains
+        for domain in [CLERK_PRODUCTION_DOMAIN, CLERK_TEST_DOMAIN]:
+            print(f"Trying domain: {domain}")
+            jwks = get_clerk_jwks(domain)
+            if not jwks:
+                continue
 
-        # Find the matching key
-        for key in jwks.get('keys', []):
-            if key.get('kid') == kid:
-                # Convert JWK to PEM format
-                return jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(key))
+            # Find the matching key
+            for key in jwks.get('keys', []):
+                if key.get('kid') == kid:
+                    print(f"Found matching key in domain: {domain}")
+                    # Convert JWK to PEM format
+                    return jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(key))
 
-        print(f"No matching key found for kid: {kid}")
+        print(f"No matching key found for kid: {kid} in any domain")
         return None
 
     except Exception as e:
