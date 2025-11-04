@@ -123,6 +123,79 @@ def validate_structured_output(data):
             if field not in edu:
                 errors.append(f"Education {idx} missing '{field}' field")
 
+    # Validate optional sections (all are optional, but if present must be valid)
+
+    # Projects (optional)
+    if 'projects' in resume:
+        if not isinstance(resume['projects'], list):
+            errors.append("'projects' must be an array")
+        else:
+            for idx, proj in enumerate(resume['projects']):
+                if 'name' not in proj or 'description' not in proj:
+                    errors.append(f"Project {idx} missing 'name' or 'description' field")
+
+    # Publications (optional)
+    if 'publications' in resume:
+        if not isinstance(resume['publications'], list):
+            errors.append("'publications' must be an array")
+        else:
+            for idx, pub in enumerate(resume['publications']):
+                required_pub_fields = ['title', 'authors', 'venue', 'date']
+                for field in required_pub_fields:
+                    if field not in pub:
+                        errors.append(f"Publication {idx} missing '{field}' field")
+
+    # Certifications (optional)
+    if 'certifications' in resume:
+        if not isinstance(resume['certifications'], list):
+            errors.append("'certifications' must be an array")
+        else:
+            for idx, cert in enumerate(resume['certifications']):
+                required_cert_fields = ['name', 'issuer']
+                for field in required_cert_fields:
+                    if field not in cert:
+                        errors.append(f"Certification {idx} missing '{field}' field")
+
+    # Awards (optional)
+    if 'awards' in resume:
+        if not isinstance(resume['awards'], list):
+            errors.append("'awards' must be an array")
+        else:
+            for idx, award in enumerate(resume['awards']):
+                required_award_fields = ['title', 'issuer', 'date']
+                for field in required_award_fields:
+                    if field not in award:
+                        errors.append(f"Award {idx} missing '{field}' field")
+
+    # Volunteer Experience (optional)
+    if 'volunteerExperience' in resume:
+        if not isinstance(resume['volunteerExperience'], list):
+            errors.append("'volunteerExperience' must be an array")
+        else:
+            for idx, vol in enumerate(resume['volunteerExperience']):
+                required_vol_fields = ['role', 'organization', 'startDate', 'endDate', 'description']
+                for field in required_vol_fields:
+                    if field not in vol:
+                        errors.append(f"Volunteer {idx} missing '{field}' field")
+
+    # Professional Memberships (optional)
+    if 'professionalMemberships' in resume:
+        if not isinstance(resume['professionalMemberships'], list):
+            errors.append("'professionalMemberships' must be an array")
+        else:
+            for idx, memb in enumerate(resume['professionalMemberships']):
+                if 'organization' not in memb:
+                    errors.append(f"Membership {idx} missing 'organization' field")
+
+    # Languages (optional)
+    if 'languages' in resume:
+        if not isinstance(resume['languages'], list):
+            errors.append("'languages' must be an array")
+        else:
+            for idx, lang in enumerate(resume['languages']):
+                if 'language' not in lang or 'proficiency' not in lang:
+                    errors.append(f"Language {idx} missing 'language' or 'proficiency' field")
+
     # Validate cover letter structure
     if not isinstance(cover_letter, dict):
         errors.append("Cover letter must be an object")
@@ -297,12 +370,72 @@ def lambda_handler(event, context):
         ]
       }}
     ],
+    "projects": [
+      {{
+        "name": "string (project name)",
+        "description": "string (1-2 sentences about the project)",
+        "technologies": ["tech1", "tech2"] or null,
+        "url": "string or null (GitHub, live demo, etc.)",
+        "date": "string or null (format: 'Mon YYYY' or 'YYYY')"
+      }}
+    ],
+    "publications": [
+      {{
+        "title": "string (paper/article title)",
+        "authors": "string (all authors)",
+        "venue": "string (journal, conference, book)",
+        "date": "string (year or 'Mon YYYY')",
+        "url": "string or null",
+        "doi": "string or null"
+      }}
+    ],
+    "certifications": [
+      {{
+        "name": "string (certification name)",
+        "issuer": "string (issuing organization)",
+        "date": "string or null (format: 'Mon YYYY' e.g. 'Jan 2021')",
+        "expiryDate": "string or null (if applicable)",
+        "credentialId": "string or null (if available)"
+      }}
+    ],
+    "awards": [
+      {{
+        "title": "string (award name)",
+        "issuer": "string (organization)",
+        "date": "string (format: 'Mon YYYY' or 'YYYY')",
+        "description": "string or null (brief description)"
+      }}
+    ],
     "education": [
       {{
         "degree": "string",
         "institution": "string",
         "location": "string or null",
         "graduationYear": "string"
+      }}
+    ],
+    "volunteerExperience": [
+      {{
+        "role": "string",
+        "organization": "string",
+        "location": "string or null",
+        "startDate": "string (format: 'Mon YYYY')",
+        "endDate": "string (format: 'Mon YYYY' or 'Present')",
+        "description": ["achievement1", "achievement2"]
+      }}
+    ],
+    "professionalMemberships": [
+      {{
+        "organization": "string (e.g., 'IEEE', 'American Medical Association')",
+        "role": "string or null (e.g., 'Member', 'Board Member')",
+        "startDate": "string or null (format: 'Mon YYYY' or 'YYYY')",
+        "endDate": "string or null (format: 'Mon YYYY' or 'Present')"
+      }}
+    ],
+    "languages": [
+      {{
+        "language": "string",
+        "proficiency": "string (Native, Fluent, Professional, Conversational, Basic)"
       }}
     ]
   }},
@@ -325,8 +458,9 @@ def lambda_handler(event, context):
    - Contact details (LinkedIn, GitHub, location)
    - Technologies, tools, or skills not mentioned
    - Job titles, companies, or dates
-   - Certifications or degrees
-   - If something is not in the master resume, use null or omit it
+   - Certifications, licenses, or degrees
+   - Projects, publications, awards, volunteer work, memberships, or languages
+   - If a section is not in the master resume, omit the entire section (leave it as empty array or don't include it)
 
 2. **CONTACT INFORMATION**:
    - Copy name, email, phone EXACTLY as they appear
@@ -355,11 +489,48 @@ def lambda_handler(event, context):
    - Each achievement: Action verb + What + Quantified impact
    - Order achievements by relevance to job description
 
-6. **EDUCATION**:
+6. **PROJECTS** (if present in master resume - common for developers, designers, students):
+   - Include 2-4 most relevant projects
+   - Brief description (1-2 sentences)
+   - Technologies used (if applicable)
+   - Link to GitHub/demo/portfolio if available
+
+7. **PUBLICATIONS** (if present - for academics, researchers, thought leaders):
+   - Include most relevant publications (papers, articles, books)
+   - Format: Title, Authors, Venue (journal/conference), Date
+   - Include DOI or URL if available
+
+8. **CERTIFICATIONS** (if present in master resume):
+   - Include relevant certifications, licenses, or professional credentials
+   - Only include if explicitly mentioned in master resume
+   - Format: Certification name, Issuing organization, Date (if available)
+   - Examples: AWS Certified Solutions Architect, PMP, RN License, CPA, CFA, etc.
+
+9. **AWARDS & HONORS** (if present - shows recognition and excellence):
+   - Include relevant awards, honors, scholarships, recognitions
+   - Format: Award name, Issuing organization, Date
+   - Examples: Dean's List, Employee of the Year, Hackathon Winner, etc.
+
+10. **EDUCATION**:
    - Include all degrees from master resume
    - Format: Degree name, Institution, Location (if available), Year
 
-7. **COVER LETTER**:
+11. **VOLUNTEER EXPERIENCE** (if present - shows character and community involvement):
+   - Include significant volunteer roles
+   - Format similar to work experience with achievements
+   - Shows leadership, compassion, community engagement
+
+12. **PROFESSIONAL MEMBERSHIPS** (if present - shows active engagement in field):
+   - Include relevant professional organizations
+   - Examples: IEEE, AMA, Bar Association, PMI, etc.
+   - Include role if more than just "Member"
+
+13. **LANGUAGES** (if present - valuable for many roles):
+   - List spoken languages with proficiency level
+   - Format: Language, Proficiency (Native, Fluent, Professional, Conversational, Basic)
+   - Only include if mentioned in master resume
+
+14. **COVER LETTER**:
    - 4 paragraphs (opening, proof, fit, closing)
    - Opening: Mention specific role and one reason for interest
    - Proof: Top 2 job requirements with specific examples
