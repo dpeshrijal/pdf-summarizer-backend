@@ -90,7 +90,9 @@ If you cannot find the information, use "Unknown Company" or "Unknown Position".
 Job Description:
 {job_description[:1500]}"""  # Use first 1500 chars for speed
 
-            extraction_response = generative_model.generate_content(
+            # Use Flash Lite for faster, cheaper extraction (simple task)
+            lite_model = genai.GenerativeModel('gemini-2.5-flash-lite')
+            extraction_response = lite_model.generate_content(
                 extraction_prompt,
                 generation_config={
                     "temperature": 0.1,  # Low temperature for factual extraction
