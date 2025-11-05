@@ -194,6 +194,33 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
     }
 });
 
+    // User Profile Lambdas (for onboarding)
+    const saveUserProfileLambda = new PythonFunction(this, 'SaveUserProfileLambda', {
+      runtime: lambda.Runtime.PYTHON_3_12,
+      entry: 'lambda/saveUserProfile',
+      index: 'lambda_function.py',
+      handler: 'lambda_handler',
+      role: lambdaRole,
+      timeout: cdk.Duration.seconds(10),
+      memorySize: 256,
+      environment: {
+        USER_PROFILES_TABLE: userProfilesTable.tableName,
+      }
+    });
+
+    const getUserProfileLambda = new PythonFunction(this, 'GetUserProfileLambda', {
+      runtime: lambda.Runtime.PYTHON_3_12,
+      entry: 'lambda/getUserProfile',
+      index: 'lambda_function.py',
+      handler: 'lambda_handler',
+      role: lambdaRole,
+      timeout: cdk.Duration.seconds(10),
+      memorySize: 256,
+      environment: {
+        USER_PROFILES_TABLE: userProfilesTable.tableName,
+      }
+    });
+
     // 5. Define the API Gateway
     const api = new apigateway.RestApi(this, 'PdfSummarizerApi', {
       defaultCorsPreflightOptions: {
@@ -211,6 +238,10 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
     api.root.resourceForPath('start-generation').addMethod('POST', new apigateway.LambdaIntegration(startGenerationLambda));
     api.root.resourceForPath('get-generation-status').addMethod('GET', new apigateway.LambdaIntegration(getGenerationStatusLambda));
     api.root.resourceForPath('list-user-generations').addMethod('GET', new apigateway.LambdaIntegration(listUserGenerationsLambda));
+
+    // User profile endpoints (onboarding)
+    api.root.resourceForPath('user/profile').addMethod('POST', new apigateway.LambdaIntegration(saveUserProfileLambda));
+    api.root.resourceForPath('user/profile').addMethod('GET', new apigateway.LambdaIntegration(getUserProfileLambda));
 
     // 6. Output the new API URL
     new cdk.CfnOutput(this, 'ApiGatewayUrl', {
