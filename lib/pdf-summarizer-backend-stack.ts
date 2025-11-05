@@ -222,6 +222,20 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
       }
     });
 
+    // Update User Subscription Lambda (for Dodo Payments webhook)
+    const updateUserSubscriptionLambda = new PythonFunction(this, 'UpdateUserSubscriptionLambda', {
+      runtime: lambda.Runtime.PYTHON_3_12,
+      entry: 'lambda/updateUserSubscription',
+      index: 'lambda_function.py',
+      handler: 'lambda_handler',
+      role: lambdaRole,
+      timeout: cdk.Duration.seconds(10),
+      memorySize: 256,
+      environment: {
+        USER_PROFILES_TABLE: userProfilesTable.tableName,
+      }
+    });
+
     // 5. Define the API Gateway
     const api = new apigateway.RestApi(this, 'PdfSummarizerApi', {
       defaultCorsPreflightOptions: {
@@ -243,6 +257,9 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
     // User profile endpoints (onboarding)
     api.root.resourceForPath('user/profile').addMethod('POST', new apigateway.LambdaIntegration(saveUserProfileLambda));
     api.root.resourceForPath('user/profile').addMethod('GET', new apigateway.LambdaIntegration(getUserProfileLambda));
+
+    // Subscription management endpoint (for Dodo Payments webhook)
+    api.root.resourceForPath('updateUserSubscription').addMethod('POST', new apigateway.LambdaIntegration(updateUserSubscriptionLambda));
 
     // 6. Output the new API URL
     new cdk.CfnOutput(this, 'ApiGatewayUrl', {
