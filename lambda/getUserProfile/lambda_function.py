@@ -1,9 +1,25 @@
 import json
 import os
 import boto3
+from decimal import Decimal
 
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(os.environ['USER_PROFILES_TABLE'])
+
+def decimal_to_number(obj):
+    """Convert DynamoDB Decimal types to int or float for JSON serialization"""
+    if isinstance(obj, list):
+        return [decimal_to_number(i) for i in obj]
+    elif isinstance(obj, dict):
+        return {k: decimal_to_number(v) for k, v in obj.items()}
+    elif isinstance(obj, Decimal):
+        # Convert to int if no decimal places, otherwise float
+        if obj % 1 == 0:
+            return int(obj)
+        else:
+            return float(obj)
+    else:
+        return obj
 
 def lambda_handler(event, context):
     """
@@ -38,6 +54,9 @@ def lambda_handler(event, context):
         response = table.get_item(Key={'userId': user_id})
 
         if 'Item' in response:
+            # Convert Decimal types to int/float for JSON serialization
+            profile = decimal_to_number(response['Item'])
+
             return {
                 'statusCode': 200,
                 'headers': {
@@ -46,7 +65,7 @@ def lambda_handler(event, context):
                 },
                 'body': json.dumps({
                     'hasProfile': True,
-                    'profile': response['Item']
+                    'profile': profile
                 })
             }
         else:
