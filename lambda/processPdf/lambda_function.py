@@ -43,6 +43,68 @@ except Exception as e:
 # =================================================================
 # Helper Functions
 # =================================================================
+def validate_resume_content(text):
+    """
+    Validates if the extracted text appears to be a resume/CV.
+    Uses heuristics to check for resume-like content.
+    """
+    text_lower = text.lower()
+    word_count = len(text.split())
+
+    # Common resume keywords and sections
+    resume_keywords = [
+        'experience', 'education', 'skills', 'work', 'employment',
+        'university', 'degree', 'bachelor', 'master', 'phd',
+        'project', 'responsibilities', 'achievements', 'accomplishments',
+        'certification', 'training', 'qualification', 'professional',
+        'career', 'resume', 'curriculum vitae', 'cv', 'objective'
+    ]
+
+    # Contact information patterns (common in resumes)
+    contact_indicators = [
+        'email', 'phone', 'linkedin', 'github', 'portfolio',
+        '@', 'tel:', 'mobile', 'address'
+    ]
+
+    # Technical/professional terms (common in resumes)
+    professional_terms = [
+        'developed', 'managed', 'led', 'implemented', 'designed',
+        'created', 'built', 'analyzed', 'coordinated', 'collaborated',
+        'programming', 'software', 'engineer', 'developer', 'analyst',
+        'manager', 'specialist', 'consultant', 'director'
+    ]
+
+    # Count matches
+    keyword_matches = sum(1 for keyword in resume_keywords if keyword in text_lower)
+    contact_matches = sum(1 for indicator in contact_indicators if indicator in text_lower)
+    professional_matches = sum(1 for term in professional_terms if term in text_lower)
+
+    # Validation logic
+    if word_count < 50:
+        return {
+            "is_valid": False,
+            "reason": "The document is too short to be a resume. Please upload a complete resume with your work experience, education, and skills."
+        }
+
+    if keyword_matches < 3 and contact_matches < 2 and professional_matches < 3:
+        return {
+            "is_valid": False,
+            "reason": "This document doesn't appear to contain resume information. Please upload a PDF with your professional experience, skills, and education."
+        }
+
+    # Additional check: Does it look like a book, article, or other non-resume content?
+    # Books/articles typically have chapters, abstracts, references
+    non_resume_indicators = ['chapter', 'abstract', 'references', 'bibliography', 'introduction', 'conclusion', 'figure', 'table of contents']
+    non_resume_matches = sum(1 for indicator in non_resume_indicators if indicator in text_lower)
+
+    if non_resume_matches >= 4 and keyword_matches < 5:
+        return {
+            "is_valid": False,
+            "reason": "This appears to be an academic paper, book, or article rather than a resume. Please upload your professional resume or CV."
+        }
+
+    return {"is_valid": True, "reason": ""}
+
 def chunk_text(text, chunk_size=1000, chunk_overlap=100):
     """Splits text into overlapping chunks."""
     if not text:
@@ -110,6 +172,11 @@ def lambda_handler(event, context):
         if not full_text:
             raise ValueError("No text could be extracted from the PDF.")
 
+        # Validate if this is actually a resume
+        validation_result = validate_resume_content(full_text)
+        if not validation_result["is_valid"]:
+            raise ValueError(f"NOT_A_RESUME: {validation_result['reason']}")
+
         # 1. Chunk the extracted text
         text_chunks = chunk_text(full_text)
         print(f"Split text into {len(text_chunks)} chunks.")
@@ -151,15 +218,30 @@ def lambda_handler(event, context):
         return {'statusCode': 200, 'body': json.dumps('Resume processed and indexed successfully!')}
 
     except Exception as e:
-        print(f"Error processing file: {e}")
+        error_message = str(e)
+        print(f"Error processing file: {error_message}")
+
+        # Check if this is a validation error
+        is_validation_error = error_message.startswith("NOT_A_RESUME:")
+        if is_validation_error:
+            # Extract the user-friendly message
+            user_message = error_message.replace("NOT_A_RESUME: ", "")
+            print(f"Validation failed: {user_message}")
+        else:
+            user_message = error_message
+
         job_id_on_error = locals().get('job_id')
         if job_id_on_error:
             try:
                 table.update_item(
                     Key={'fileId': job_id_on_error},
-                    UpdateExpression="set processingStatus = :p, summary = :s", # Reusing 'summary' field for error
-                    ExpressionAttributeValues={':p': 'FAILED', ':s': str(e)}
+                    UpdateExpression="set processingStatus = :p, summary = :s, errorType = :t",
+                    ExpressionAttributeValues={
+                        ':p': 'FAILED',
+                        ':s': user_message,
+                        ':t': 'VALIDATION_ERROR' if is_validation_error else 'PROCESSING_ERROR'
+                    }
                 )
             except Exception as db_error:
                 print(f"Could not update DynamoDB with error status: {db_error}")
-        return {'statusCode': 500, 'body': json.dumps(f'Error processing file: {str(e)}')}
+        return {'statusCode': 500, 'body': json.dumps(f'Error processing file: {error_message}')}
