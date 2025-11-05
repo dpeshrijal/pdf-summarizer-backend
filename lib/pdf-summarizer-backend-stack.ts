@@ -39,7 +39,14 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       timeToLiveAttribute: 'ttl', // Auto-delete old jobs after 24 hours
     });
-    
+
+    // User profiles table for onboarding data
+    const userProfilesTable = new dynamodb.Table(this, 'UserProfilesTable', {
+      partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
     // 3. Define the shared IAM Role for our Lambda functions
     const lambdaRole = new iam.Role(this, 'LambdaExecutionRole', {
         assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
@@ -52,6 +59,7 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
     uploadsBucket.grantReadWrite(lambdaRole);
     summariesTable.grantReadWriteData(lambdaRole);
     generationJobsTable.grantReadWriteData(lambdaRole);
+    userProfilesTable.grantReadWriteData(lambdaRole);
     lambdaRole.addToPolicy(new iam.PolicyStatement({
       actions: ['ssm:GetParameter'],
       resources: [
