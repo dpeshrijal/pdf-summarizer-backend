@@ -307,6 +307,19 @@ def lambda_handler(event, context):
         user_id = file_record['Item']['userId']
         print(f"Retrieved userId: {user_id} for fileId: {file_id}")
 
+        # Fetch user profile (if exists) for contact info
+        profile_data = None
+        try:
+            profiles_table = dynamodb.Table(os.environ.get('USER_PROFILES_TABLE'))
+            profile_response = profiles_table.get_item(Key={'userId': user_id})
+            if 'Item' in profile_response:
+                profile_data = profile_response['Item']
+                print(f"Found user profile for userId: {user_id}")
+            else:
+                print(f"No profile found for userId: {user_id}, will extract from resume")
+        except Exception as e:
+            print(f"Warning: Could not fetch user profile: {str(e)}")
+
         # Extract company name and job title
         company_name, job_title = extract_company_and_position(job_description)
 
@@ -621,6 +634,20 @@ def lambda_handler(event, context):
 {job_description}
 ---
 
+{"**USER PROFILE (Priority Contact Info):**" if profile_data else ""}
+{f"""---
+Name: {profile_data.get('name')}
+Email: {profile_data.get('email')}
+Phone: {profile_data.get('phone', 'Not provided')}
+Location: {profile_data.get('location', 'Not provided')}
+LinkedIn: {profile_data.get('linkedinUrl', 'Not provided')}
+GitHub: {profile_data.get('githubUrl', 'Not provided')}
+Portfolio: {profile_data.get('portfolioUrl', 'Not provided')}
+{f"Custom Link ({profile_data.get('customUrlLabel')}): {profile_data.get('customUrl')}" if profile_data.get('customUrl') else ''}
+---
+
+**IMPORTANT**: Use the above profile contact information as the PRIMARY source for contact details. Only fall back to master resume if profile data is incomplete.
+""" if profile_data else ""}
 **MASTER RESUME CONTEXT:**
 ---
 {resume_context}
