@@ -586,26 +586,35 @@ def lambda_handler(event, context):
    - Use first person but vary sentence structure
 
 15. **MATCH SCORE** (ATS Compatibility Analysis):
-   - **Overall Score (0-100)**: Comprehensive match percentage
+   - **IMPORTANT**: Calculate scores with precision - use specific numbers (e.g., 73, 67, 88) NOT rounded numbers (avoid patterns like 70, 75, 80, 85, 90)
+   - **Overall Score (0-100)**: Comprehensive match percentage based on weighted average
+     * Calculate by: (skillsMatch * 0.4) + (experienceMatch * 0.35) + (educationMatch * 0.25)
      * 90-100: Excellent match, highly qualified
      * 75-89: Strong match, well qualified
      * 60-74: Good match, qualified with some gaps
      * 40-59: Moderate match, missing key requirements
      * 0-39: Weak match, significant gaps
-   - **Skills Match**: Compare candidate's skills vs job requirements
-     * Count overlapping technical/professional skills
-     * Consider skill level and relevance
-   - **Experience Match**: Years of experience and role relevance
-     * Does experience level match requirements?
-     * Are past roles related to target position?
-   - **Education Match**: Education requirements alignment
-     * Degree level and field match
-     * Certifications and training
+   - **Skills Match (0-100)**: Compare candidate's skills vs job requirements
+     * Count total required skills in job posting
+     * Count how many candidate possesses
+     * Calculate: (matched_skills / total_required_skills) * 100
+     * Consider skill level (basic vs expert) and adjust accordingly
+     * Be precise - use actual calculation, not estimates
+   - **Experience Match (0-100)**: Years of experience and role relevance
+     * Compare years: candidate's experience vs required years
+     * Evaluate role relevance: how closely past roles align
+     * Calculate based on both factors with specific reasoning
+   - **Education Match (0-100)**: Education requirements alignment
+     * Degree level match (Bachelor's, Master's, PhD)
+     * Field of study relevance
+     * Certifications and specialized training
+     * Calculate based on requirements fulfillment
    - **Summary**: 2-3 sentences explaining the score objectively
-   - **Strengths**: 3-5 specific areas where candidate excels
+   - **Strengths**: 3-5 specific areas where candidate excels for this role
    - **Gaps**: 1-3 areas where candidate may be weaker or missing requirements
      * Be honest but constructive
      * If score >85%, gaps can be minor or "none identified"
+   - **Use realistic, varied scores** - avoid numbers ending in 0 or 5 unless genuinely accurate
 
 **JOB DESCRIPTION:**
 ---
