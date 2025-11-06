@@ -246,7 +246,7 @@ def extract_company_and_position(job_description):
 Return ONLY valid JSON in this exact format:
 {{"company": "Company Name", "position": "Job Title"}}
 
-If you cannot find the information, use "Unknown Company" or "Unknown Position".
+If you cannot find the company name, return null for company. If you cannot find the position, return null for position.
 
 Job Description:
 {job_description[:1500]}"""
@@ -263,15 +263,15 @@ Job Description:
 
         # Parse JSON response
         result = json.loads(extraction_response.text.strip())
-        company_name = result.get('company', 'Unknown Company')
-        job_title = result.get('position', 'Unknown Position')
+        company_name = result.get('company', None)
+        job_title = result.get('position', None)
 
         print(f"Extracted company: {company_name}, position: {job_title}")
         return company_name, job_title
 
     except Exception as e:
         print(f"Error extracting company/position: {e}")
-        return "Unknown Company", "Unknown Position"
+        return None, None
 
 # =================================================================
 # Main Lambda Handler
@@ -478,10 +478,10 @@ def lambda_handler(event, context):
     ]
   }},
   "coverLetter": {{
-    "companyName": "{company_name}",
-    "position": "{job_title}",
+    "companyName": {f'"{company_name}"' if company_name else 'null'},
+    "position": {f'"{job_title}"' if job_title else 'null'},
     "paragraphs": [
-      "string (opening paragraph)",
+      "string (opening paragraph - DO NOT include 'Dear Hiring Manager' or any greeting, start directly with content)",
       "string (proof/experience paragraph)",
       "string (fit/approach paragraph)",
       "string (closing paragraph)"
@@ -589,14 +589,47 @@ def lambda_handler(event, context):
    - Format: Language, Proficiency (Native, Fluent, Professional, Conversational, Basic)
    - Only include if mentioned in master resume
 
-14. **COVER LETTER**:
-   - 4 paragraphs (opening, proof, fit, closing)
-   - Opening: Mention specific role and one reason for interest
-   - Proof: Top 2 job requirements with specific examples
-   - Fit: How you work and why this environment appeals
-   - Closing: Call to action, express interest in discussing
-   - Natural, conversational tone
-   - Use first person but vary sentence structure
+14. **COVER LETTER** (CRITICAL - Make it sound natural and authentic):
+   - **DO NOT start with "Dear Hiring Manager" or any greeting** - the PDF generator will add the greeting automatically
+   - 4 paragraphs total (opening, proof, fit, closing)
+
+   **Paragraph 1 - Opening (express genuine interest):**
+   - Start directly with why you're excited about THIS specific opportunity
+   - If company name is known, mention it naturally ("I'm excited to apply for the [position] role at [company]")
+   - If company name is unknown, focus on the role itself ("I'm excited to apply for this [position] opportunity")
+   - Mention 1-2 specific aspects of the role/company that genuinely appeal
+   - Keep it authentic - don't sound like you're trying too hard
+   - 2-3 sentences max
+
+   **Paragraph 2 - Proof (demonstrate relevant experience):**
+   - Pick the top 2-3 requirements from the job description
+   - For each, provide a SPECIFIC example from your experience
+   - Use actual metrics, technologies, or outcomes when possible
+   - Don't just list skills - tell mini-stories of how you've used them
+   - Make it conversational: "In my current role at [company], I..." not "I have experience in..."
+   - 3-4 sentences
+
+   **Paragraph 3 - Fit (show you understand the role and culture):**
+   - Demonstrate understanding of what the role actually entails
+   - Connect your work style/approach to what the role needs
+   - If company culture/values are mentioned in JD, reference them naturally
+   - Show enthusiasm for the specific challenges or opportunities
+   - 2-3 sentences
+
+   **Paragraph 4 - Closing (confident but not pushy):**
+   - Express genuine interest in discussing further
+   - Keep it brief and professional
+   - 1-2 sentences
+
+   **TONE GUIDELINES:**
+   - Write like you're sending an email to a colleague, not applying to a faceless corporation
+   - Vary sentence structure - don't start every sentence with "I"
+   - Use contractions naturally ("I'm" instead of "I am", "I've" instead of "I have")
+   - Be confident but not arrogant
+   - Show personality while staying professional
+   - Avoid buzzwords like "synergy", "rockstar", "ninja", "passionate" (unless genuinely appropriate)
+   - Don't sound desperate or overly formal
+   - Make it sound like YOU wrote it, not a template
 
 15. **MATCH SCORE** (ATS Compatibility Analysis):
    - **IMPORTANT**: Calculate scores with precision - use specific numbers (e.g., 73, 67, 88) NOT rounded numbers (avoid patterns like 70, 75, 80, 85, 90)
