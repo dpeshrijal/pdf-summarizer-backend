@@ -39,12 +39,12 @@ def lambda_handler(event, context):
                 'fileId': item.get('fileId'),
                 'originalFilename': item.get('originalFilename'),
                 'processingStatus': item.get('processingStatus'),
-                'uploadedAt': item.get('fileId')  # fileId contains timestamp in UUID
+                'createdAt': item.get('createdAt', 0)  # Unix timestamp for sorting
             }
             resumes.append(resume)
 
-        # Sort by fileId (most recent first - assuming UUID v4 with timestamp)
-        resumes.sort(key=lambda x: x.get('fileId', ''), reverse=True)
+        # Sort by createdAt timestamp (most recent first)
+        resumes.sort(key=lambda x: x.get('createdAt', 0), reverse=True)
 
         print(f"Found {len(resumes)} resumes for user {user_id}")
 

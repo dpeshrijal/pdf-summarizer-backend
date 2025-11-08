@@ -2,6 +2,7 @@ import json
 import boto3
 import uuid
 import os
+import time
 from auth import get_user_id_from_event, create_unauthorized_response, CORS_HEADERS
 
 s3_client = boto3.client('s3')
@@ -34,7 +35,8 @@ def lambda_handler(event, context):
                 'fileId': file_id,
                 'userId': user_id,  # Store userId for data isolation
                 'originalFilename': original_filename,
-                'processingStatus': 'PENDING'
+                'processingStatus': 'PENDING',
+                'createdAt': int(time.time())  # Unix timestamp for sorting
             }
         )
 
