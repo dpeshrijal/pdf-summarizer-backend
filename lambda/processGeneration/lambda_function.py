@@ -14,7 +14,7 @@ dynamodb = boto3.resource('dynamodb')
 
 # Environment variables
 GENERATION_JOBS_TABLE = os.environ.get('GENERATION_JOBS_TABLE')
-MODEL_NAME = os.environ.get('MODEL_NAME', 'gemini-2.5-pro')  # Main model for resume generation
+MODEL_NAME = os.environ.get('MODEL_NAME', 'gemini-flash-latest')  # Main model for resume generation
 
 def get_ssm_parameter(parameter_name):
     """Helper function to get a SecureString parameter from SSM."""
