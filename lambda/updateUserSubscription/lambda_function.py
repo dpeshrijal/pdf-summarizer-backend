@@ -2,9 +2,24 @@ import json
 import os
 import boto3
 from datetime import datetime
+from svix.webhooks import Webhook, WebhookVerificationError
 
+# Initialize AWS clients
+ssm = boto3.client('ssm')
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(os.environ['USER_PROFILES_TABLE'])
+
+def get_ssm_parameter(parameter_name):
+    """Helper function to get a SecureString parameter from SSM."""
+    response = ssm.get_parameter(Name=parameter_name, WithDecryption=True)
+    return response['Parameter']['Value']
+
+# Get webhook secret at cold start
+try:
+    WEBHOOK_SECRET = get_ssm_parameter("/pdf-summarizer/dodo-webhook-secret")
+except Exception as e:
+    print(f"WARNING: Could not load webhook secret from SSM: {e}")
+    WEBHOOK_SECRET = None
 
 def lambda_handler(event, context):
     """
@@ -30,6 +45,55 @@ def lambda_handler(event, context):
     """
 
     try:
+        # ===== WEBHOOK SIGNATURE VERIFICATION =====
+        # Verify the webhook signature to ensure it came from Dodo Payments
+        if WEBHOOK_SECRET:
+            headers = event.get('headers', {})
+
+            # Extract webhook headers (case-insensitive)
+            webhook_id = headers.get('webhook-id') or headers.get('Webhook-Id')
+            webhook_signature = headers.get('webhook-signature') or headers.get('Webhook-Signature')
+            webhook_timestamp = headers.get('webhook-timestamp') or headers.get('Webhook-Timestamp')
+
+            if not all([webhook_id, webhook_signature, webhook_timestamp]):
+                print("Missing webhook headers - rejecting request")
+                return {
+                    'statusCode': 401,
+                    'headers': {
+                        'Access-Control-Allow-Origin': '*',
+                        'Access-Control-Allow-Headers': 'Content-Type',
+                    },
+                    'body': json.dumps({
+                        'error': 'Missing webhook verification headers'
+                    })
+                }
+
+            # Verify webhook signature using svix library (same as standardwebhooks)
+            wh = Webhook(WEBHOOK_SECRET)
+            payload = event.get('body', '')
+
+            try:
+                wh.verify(payload, {
+                    "webhook-id": webhook_id,
+                    "webhook-signature": webhook_signature,
+                    "webhook-timestamp": webhook_timestamp,
+                })
+                print("Webhook signature verified successfully")
+            except WebhookVerificationError as e:
+                print(f"Webhook verification failed: {e}")
+                return {
+                    'statusCode': 401,
+                    'headers': {
+                        'Access-Control-Allow-Origin': '*',
+                        'Access-Control-Allow-Headers': 'Content-Type',
+                    },
+                    'body': json.dumps({
+                        'error': 'Webhook signature verification failed'
+                    })
+                }
+        else:
+            print("WARNING: Webhook secret not configured - skipping verification")
+
         # Parse request body
         body = json.loads(event.get('body', '{}'))
 

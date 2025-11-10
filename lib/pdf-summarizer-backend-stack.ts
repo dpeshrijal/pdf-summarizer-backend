@@ -82,6 +82,7 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
           `arn:aws:ssm:${this.region}:${this.account}:parameter/pdf-summarizer/gemini-api-key`,
           `arn:aws:ssm:${this.region}:${this.account}:parameter/pdf-summarizer/pinecone-api-key`,
           `arn:aws:ssm:${this.region}:${this.account}:parameter/pdf-summarizer/pinecone-environment`,
+          `arn:aws:ssm:${this.region}:${this.account}:parameter/pdf-summarizer/dodo-webhook-secret`,
         ],
       })
     );
