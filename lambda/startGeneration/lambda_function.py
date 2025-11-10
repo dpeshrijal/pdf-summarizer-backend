@@ -13,6 +13,7 @@ lambda_client = boto3.client('lambda')
 GENERATION_JOBS_TABLE = os.environ.get('GENERATION_JOBS_TABLE')
 PROCESS_GENERATION_FUNCTION_NAME = os.environ.get('PROCESS_GENERATION_FUNCTION_NAME')
 SUMMARIES_TABLE = os.environ.get('SUMMARIES_TABLE')  # To verify user owns the file
+USER_PROFILES_TABLE = os.environ.get('USER_PROFILES_TABLE')  # To check user credits
 
 def lambda_handler(event, context):
     """
@@ -63,6 +64,42 @@ def lambda_handler(event, context):
         except Exception as e:
             print(f"Error checking file ownership: {e}")
             # Continue anyway if summaries table doesn't have the record yet (for backwards compatibility)
+
+        # ===== CREDIT CHECK =====
+        # Verify user has sufficient credits before starting generation
+        user_profiles_table = dynamodb.Table(USER_PROFILES_TABLE)
+        try:
+            profile_response = user_profiles_table.get_item(Key={'userId': user_id})
+            if 'Item' in profile_response:
+                profile = profile_response['Item']
+                subscription_tier = profile.get('subscriptionTier', 'free')
+
+                # Unlimited tier always allowed
+                if subscription_tier != 'unlimited':
+                    credits_remaining = int(profile.get('creditsRemaining', 3))
+
+                    if credits_remaining <= 0:
+                        print(f"User {user_id} has no credits remaining (tier: {subscription_tier})")
+                        return {
+                            "statusCode": 403,
+                            "headers": CORS_HEADERS,
+                            "body": json.dumps({
+                                "error": "Insufficient credits",
+                                "message": "You have no credits remaining. Please upgrade to continue.",
+                                "creditsRemaining": 0
+                            })
+                        }
+
+                    print(f"User {user_id} has {credits_remaining} credits remaining")
+                else:
+                    print(f"User {user_id} has unlimited tier")
+            else:
+                # No profile found - default to free tier with 3 credits
+                print(f"No profile found for user {user_id}, allowing generation with default credits")
+        except Exception as e:
+            print(f"Error checking credits: {e}")
+            # Fail open for backwards compatibility - allow generation if credit check fails
+            print("Allowing generation despite credit check error")
 
         # Generate unique job ID
         job_id = str(uuid.uuid4())

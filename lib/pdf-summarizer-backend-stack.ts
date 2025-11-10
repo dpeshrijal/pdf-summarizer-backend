@@ -174,6 +174,7 @@ export class PdfSummarizerBackendStack extends cdk.Stack {
         environment: {
           GENERATION_JOBS_TABLE: generationJobsTable.tableName,
           SUMMARIES_TABLE: summariesTable.tableName, // For file ownership verification
+          USER_PROFILES_TABLE: userProfilesTable.tableName, // For credit validation
           PROCESS_GENERATION_FUNCTION_NAME: "ProcessGenerationLambda", // Will be updated after creation
         },
       }
