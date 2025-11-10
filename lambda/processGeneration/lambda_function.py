@@ -691,8 +691,8 @@ Generate the structured JSON output now. Remember: NO markdown code blocks, NO e
         # Generate with strict JSON mode
         print(f"Generating structured output with {MODEL_NAME}...")
         generation_config = genai.GenerationConfig(
-            temperature=0.3,  # Lower for more consistent scoring (was 0.7)
-            top_p=0.95,       # Slightly higher for quality
+            temperature=0.7,
+            top_p=0.9,
             top_k=40,
             response_mime_type="application/json"  # Force JSON output
         )
