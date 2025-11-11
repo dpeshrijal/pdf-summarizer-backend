@@ -1,11 +1,18 @@
 import json
 import boto3
 import os
+from decimal import Decimal
 from auth import get_user_id_from_event, create_unauthorized_response, CORS_HEADERS
 
 dynamodb = boto3.resource('dynamodb')
 TABLE_NAME = os.environ.get('TABLE_NAME')
 table = dynamodb.Table(TABLE_NAME)
+
+def decimal_to_native(obj):
+    """Convert DynamoDB Decimal types to native Python types for JSON serialization"""
+    if isinstance(obj, Decimal):
+        return int(obj) if obj % 1 == 0 else float(obj)
+    raise TypeError
 
 def lambda_handler(event, context):
     """
@@ -54,7 +61,7 @@ def lambda_handler(event, context):
             "body": json.dumps({
                 "resumes": resumes,
                 "count": len(resumes)
-            })
+            }, default=decimal_to_native)
         }
 
     except Exception as e:
