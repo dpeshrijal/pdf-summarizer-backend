@@ -767,7 +767,21 @@ Generate the structured JSON output now. Remember: NO markdown code blocks, NO e
 
                 print(f"✓ Deducted 1 credit from user {user_id}: {current_credits} → {new_credits}")
             else:
-                print(f"⚠ No profile found for user {user_id} - skipping credit deduction")
+                # No profile exists - create one with 3 free credits and deduct 1
+                print(f"⚠ No profile found for user {user_id} - creating profile with 3 free credits")
+
+                now = datetime.now().isoformat()
+                profiles_table.put_item(
+                    Item={
+                        'userId': user_id,
+                        'creditsRemaining': 2,  # Start with 3, immediately deduct 1
+                        'totalCreditsPurchased': 0,
+                        'createdAt': now,
+                        'updatedAt': now
+                    }
+                )
+
+                print(f"✓ Created profile for user {user_id} with 2 credits remaining (3 free credits - 1 used)")
 
         except Exception as credit_error:
             # Log but don't fail the whole operation if credit deduction fails

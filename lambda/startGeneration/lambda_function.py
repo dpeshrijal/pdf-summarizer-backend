@@ -89,6 +89,7 @@ def lambda_handler(event, context):
                 print(f"User {user_id} has {credits_remaining} credits remaining")
             else:
                 # No profile found - allow generation with default 3 free credits
+                # Profile will be created in processGeneration Lambda with creditsRemaining=2 (3 free - 1 used)
                 print(f"No profile found for user {user_id}, allowing generation with default 3 free credits")
         except Exception as e:
             print(f"Error checking credits: {e}")
