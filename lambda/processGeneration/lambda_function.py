@@ -5,6 +5,7 @@ import boto3
 import google.generativeai as genai
 from pinecone import Pinecone
 from decimal import Decimal
+from datetime import datetime
 
 # =================================================================
 # Initialize Clients (done once per cold start)
@@ -742,6 +743,36 @@ Generate the structured JSON output now. Remember: NO markdown code blocks, NO e
                 ':ttl': int(time.time()) + (365 * 24 * 60 * 60)  # 1 year retention
             }
         )
+
+        # ===== DEDUCT CREDIT ON SUCCESSFUL COMPLETION =====
+        try:
+            profiles_table = dynamodb.Table(os.environ.get('USER_PROFILES_TABLE'))
+            profile_response = profiles_table.get_item(Key={'userId': user_id})
+
+            if 'Item' in profile_response:
+                profile = profile_response['Item']
+                current_credits = int(profile.get('creditsRemaining', 3))
+
+                # Deduct 1 credit
+                new_credits = max(0, current_credits - 1)
+
+                profiles_table.update_item(
+                    Key={'userId': user_id},
+                    UpdateExpression='SET creditsRemaining = :newCredits, updatedAt = :updatedAt',
+                    ExpressionAttributeValues={
+                        ':newCredits': new_credits,
+                        ':updatedAt': datetime.now().isoformat()
+                    }
+                )
+
+                print(f"✓ Deducted 1 credit from user {user_id}: {current_credits} → {new_credits}")
+            else:
+                print(f"⚠ No profile found for user {user_id} - skipping credit deduction")
+
+        except Exception as credit_error:
+            # Log but don't fail the whole operation if credit deduction fails
+            print(f"⚠ Error deducting credit: {str(credit_error)}")
+            print("Generation succeeded but credit deduction failed - manual adjustment may be needed")
 
         print(f"✓ Job {job_id} completed successfully with structured output")
         return {"statusCode": 200, "message": "Generation completed"}

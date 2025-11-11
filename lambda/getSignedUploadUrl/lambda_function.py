@@ -40,6 +40,12 @@ def lambda_handler(event, context):
             }
         )
 
+        # Maximum file size: 5MB (5 * 1024 * 1024 bytes)
+        # NOTE: S3 presigned PUT URLs don't support content-length enforcement
+        # File size validation is done on the frontend before upload
+        # Additional backend validation could be added via S3 bucket policy if needed
+        MAX_FILE_SIZE = 5 * 1024 * 1024
+
         presigned_url = s3_client.generate_presigned_url(
             'put_object',
             Params={
@@ -59,7 +65,8 @@ def lambda_handler(event, context):
             "body": json.dumps({
                 "uploadUrl": presigned_url,
                 "fileId": file_id,
-                "s3Key": s3_key
+                "s3Key": s3_key,
+                "maxFileSize": MAX_FILE_SIZE  # Return max file size for frontend validation
             })
         }
     except Exception as e:

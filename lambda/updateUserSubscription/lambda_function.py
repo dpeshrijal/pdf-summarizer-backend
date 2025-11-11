@@ -23,24 +23,17 @@ except Exception as e:
 
 def lambda_handler(event, context):
     """
-    Update user subscription data
+    Handle credit pack purchases via Dodo Payments webhook
     POST /user/subscription
 
-    Expected body:
+    Expected webhook payload:
     {
         "userId": "user123",
-        "subscriptionTier": "pro",  # free, pro, unlimited
-        "subscriptionStatus": "active",  # active, cancelled, paused, past_due
-        "subscriptionId": "sub_xxx",  # Dodo subscription ID
-        "dodoCustomerId": "cus_xxx",  # Dodo customer ID
-        "creditsRemaining": 200,
-        "creditsLimit": 200,
-        "billingCycleStart": "2025-01-01T00:00:00Z",
-        "billingCycleEnd": "2025-02-01T00:00:00Z",
-        "lastPaymentId": "pay_xxx",
-        "lastPaymentDate": "2025-01-01T00:00:00Z",
-        "cancelledAt": "2025-01-15T00:00:00Z",  # optional
-        "refundedAt": "2025-01-15T00:00:00Z"  # optional
+        "productId": "prod_xxx",  # Dodo product ID
+        "credits": 50,  # Number of credits purchased (20, 50, 150, or 500)
+        "amount": 995,  # Amount paid in cents ($9.95)
+        "paymentId": "pay_xxx",  # Dodo payment ID
+        "dodoCustomerId": "cus_xxx"  # Dodo customer ID (optional)
     }
     """
 
@@ -112,42 +105,85 @@ def lambda_handler(event, context):
                 })
             }
 
-        # Get existing profile
+        # Validate required fields for credit purchase
+        if 'credits' not in body or 'productId' not in body:
+            return {
+                'statusCode': 400,
+                'headers': {
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type',
+                },
+                'body': json.dumps({
+                    'error': 'Missing required fields: credits and productId'
+                })
+            }
+
+        credits_to_add = int(body['credits'])
+        product_id = body['productId']
+        amount = body.get('amount', 0)
+        payment_id = body.get('paymentId', 'unknown')
+
+        print(f"Processing credit pack purchase for user {user_id}: {credits_to_add} credits")
+
+        # Get existing profile or create new one
         response = table.get_item(Key={'userId': user_id})
 
         if 'Item' not in response:
-            # Create new profile if it doesn't exist
-            profile_item = {
-                'userId': user_id,
-                'createdAt': datetime.utcnow().isoformat(),
-                'updatedAt': datetime.utcnow().isoformat(),
-            }
+            # First-time purchaser - create new profile
+            current_credits = 3  # Start with free credits
+            total_purchased = 0
+            purchase_history = []
+            print(f"Creating new profile for user {user_id}")
         else:
+            # Existing user
             profile_item = response['Item']
-            profile_item['updatedAt'] = datetime.utcnow().isoformat()
+            current_credits = int(profile_item.get('creditsRemaining', 3))
+            total_purchased = int(profile_item.get('totalCreditsPurchased', 0))
+            purchase_history = profile_item.get('purchaseHistory', [])
 
-        # Update subscription fields
-        subscription_fields = [
-            'subscriptionTier',
-            'subscriptionStatus',
-            'subscriptionId',
-            'dodoCustomerId',
-            'creditsRemaining',
-            'creditsLimit',
-            'billingCycleStart',
-            'billingCycleEnd',
-            'lastPaymentId',
-            'lastPaymentDate',
-            'cancelledAt',
-            'refundedAt',
-        ]
+        # Calculate new balances
+        new_credits = current_credits + credits_to_add
+        new_total_purchased = total_purchased + credits_to_add
 
-        for field in subscription_fields:
-            if field in body:
-                profile_item[field] = body[field]
+        # Add purchase to history
+        purchase_record = {
+            'productId': product_id,
+            'credits': credits_to_add,
+            'amount': amount,
+            'paymentId': payment_id,
+            'purchaseDate': datetime.utcnow().isoformat()
+        }
+        purchase_history.append(purchase_record)
+
+        # Create updated profile
+        profile_item = {
+            'userId': user_id,
+            'creditsRemaining': new_credits,
+            'totalCreditsPurchased': new_total_purchased,
+            'lastPurchaseProductId': product_id,
+            'lastPurchaseCredits': credits_to_add,
+            'lastPurchaseAmount': amount,
+            'lastPurchaseDate': datetime.utcnow().isoformat(),
+            'lastPaymentId': payment_id,
+            'purchaseHistory': purchase_history,
+            'updatedAt': datetime.utcnow().isoformat()
+        }
+
+        # Keep createdAt if it exists
+        if 'Item' in response and 'createdAt' in response['Item']:
+            profile_item['createdAt'] = response['Item']['createdAt']
+        else:
+            profile_item['createdAt'] = datetime.utcnow().isoformat()
+
+        # Store customer ID if provided
+        if 'dodoCustomerId' in body:
+            profile_item['dodoCustomerId'] = body['dodoCustomerId']
 
         # Save to DynamoDB
         table.put_item(Item=profile_item)
+
+        print(f"✓ Credits updated: {current_credits} → {new_credits} (+{credits_to_add})")
+        print(f"✓ Total lifetime purchases: {new_total_purchased} credits")
 
         return {
             'statusCode': 200,

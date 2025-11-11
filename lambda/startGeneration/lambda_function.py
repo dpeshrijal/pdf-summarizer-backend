@@ -72,30 +72,24 @@ def lambda_handler(event, context):
             profile_response = user_profiles_table.get_item(Key={'userId': user_id})
             if 'Item' in profile_response:
                 profile = profile_response['Item']
-                subscription_tier = profile.get('subscriptionTier', 'free')
+                credits_remaining = int(profile.get('creditsRemaining', 3))
 
-                # Unlimited tier always allowed
-                if subscription_tier != 'unlimited':
-                    credits_remaining = int(profile.get('creditsRemaining', 3))
+                if credits_remaining <= 0:
+                    print(f"User {user_id} has no credits remaining")
+                    return {
+                        "statusCode": 403,
+                        "headers": CORS_HEADERS,
+                        "body": json.dumps({
+                            "error": "Insufficient credits",
+                            "message": "You have no credits remaining. Please purchase more credits to continue.",
+                            "creditsRemaining": 0
+                        })
+                    }
 
-                    if credits_remaining <= 0:
-                        print(f"User {user_id} has no credits remaining (tier: {subscription_tier})")
-                        return {
-                            "statusCode": 403,
-                            "headers": CORS_HEADERS,
-                            "body": json.dumps({
-                                "error": "Insufficient credits",
-                                "message": "You have no credits remaining. Please upgrade to continue.",
-                                "creditsRemaining": 0
-                            })
-                        }
-
-                    print(f"User {user_id} has {credits_remaining} credits remaining")
-                else:
-                    print(f"User {user_id} has unlimited tier")
+                print(f"User {user_id} has {credits_remaining} credits remaining")
             else:
-                # No profile found - default to free tier with 3 credits
-                print(f"No profile found for user {user_id}, allowing generation with default credits")
+                # No profile found - allow generation with default 3 free credits
+                print(f"No profile found for user {user_id}, allowing generation with default 3 free credits")
         except Exception as e:
             print(f"Error checking credits: {e}")
             # Fail open for backwards compatibility - allow generation if credit check fails
