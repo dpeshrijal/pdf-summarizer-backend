@@ -70,6 +70,7 @@ def lambda_handler(event, context):
         portfolio_url = body.get('portfolioUrl')
         custom_url = body.get('customUrl')
         custom_url_label = body.get('customUrlLabel')
+        onboarding_complete = body.get('onboardingComplete')
 
         # Validate URLs if provided
         url_pattern = r'^https?://.+'
@@ -103,11 +104,36 @@ def lambda_handler(event, context):
             'updatedAt': timestamp,
         }
 
-        # Check if this is a new profile (for createdAt)
+        # Check if this is a new profile (for createdAt and preserving existing fields)
         try:
             existing = table.get_item(Key={'userId': user_id})
             if 'Item' in existing:
-                profile_item['createdAt'] = existing['Item'].get('createdAt', timestamp)
+                existing_item = existing['Item']
+                profile_item['createdAt'] = existing_item.get('createdAt', timestamp)
+
+                # Preserve credit-related fields if they exist
+                if 'creditsRemaining' in existing_item:
+                    profile_item['creditsRemaining'] = existing_item['creditsRemaining']
+                if 'totalCreditsPurchased' in existing_item:
+                    profile_item['totalCreditsPurchased'] = existing_item['totalCreditsPurchased']
+                if 'lastPurchaseProductId' in existing_item:
+                    profile_item['lastPurchaseProductId'] = existing_item['lastPurchaseProductId']
+                if 'lastPurchaseCredits' in existing_item:
+                    profile_item['lastPurchaseCredits'] = existing_item['lastPurchaseCredits']
+                if 'lastPurchaseAmount' in existing_item:
+                    profile_item['lastPurchaseAmount'] = existing_item['lastPurchaseAmount']
+                if 'lastPurchaseDate' in existing_item:
+                    profile_item['lastPurchaseDate'] = existing_item['lastPurchaseDate']
+                if 'lastPaymentId' in existing_item:
+                    profile_item['lastPaymentId'] = existing_item['lastPaymentId']
+                if 'dodoCustomerId' in existing_item:
+                    profile_item['dodoCustomerId'] = existing_item['dodoCustomerId']
+                if 'purchaseHistory' in existing_item:
+                    profile_item['purchaseHistory'] = existing_item['purchaseHistory']
+
+                # Preserve onboardingComplete if not explicitly provided in request
+                if onboarding_complete is None and 'onboardingComplete' in existing_item:
+                    profile_item['onboardingComplete'] = existing_item['onboardingComplete']
             else:
                 profile_item['createdAt'] = timestamp
         except Exception:
@@ -128,6 +154,8 @@ def lambda_handler(event, context):
             profile_item['customUrl'] = custom_url
         if custom_url_label:
             profile_item['customUrlLabel'] = custom_url_label
+        if onboarding_complete is not None:
+            profile_item['onboardingComplete'] = onboarding_complete
 
         # Save to DynamoDB
         table.put_item(Item=profile_item)

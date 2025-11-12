@@ -129,17 +129,18 @@ def lambda_handler(event, context):
         response = table.get_item(Key={'userId': user_id})
 
         if 'Item' not in response:
-            # First-time purchaser - create new profile
+            # First-time purchaser - create new profile (this should rarely happen now)
             current_credits = 3  # Start with free credits
             total_purchased = 0
             purchase_history = []
+            existing_item = {}
             print(f"Creating new profile for user {user_id}")
         else:
-            # Existing user
-            profile_item = response['Item']
-            current_credits = int(profile_item.get('creditsRemaining', 3))
-            total_purchased = int(profile_item.get('totalCreditsPurchased', 0))
-            purchase_history = profile_item.get('purchaseHistory', [])
+            # Existing user - preserve all existing fields
+            existing_item = response['Item']
+            current_credits = int(existing_item.get('creditsRemaining', 3))
+            total_purchased = int(existing_item.get('totalCreditsPurchased', 0))
+            purchase_history = existing_item.get('purchaseHistory', [])
 
         # Calculate new balances
         new_credits = current_credits + credits_to_add
@@ -155,24 +156,23 @@ def lambda_handler(event, context):
         }
         purchase_history.append(purchase_record)
 
-        # Create updated profile
-        profile_item = {
-            'userId': user_id,
-            'creditsRemaining': new_credits,
-            'totalCreditsPurchased': new_total_purchased,
-            'lastPurchaseProductId': product_id,
-            'lastPurchaseCredits': credits_to_add,
-            'lastPurchaseAmount': amount,
-            'lastPurchaseDate': datetime.utcnow().isoformat(),
-            'lastPaymentId': payment_id,
-            'purchaseHistory': purchase_history,
-            'updatedAt': datetime.utcnow().isoformat()
-        }
+        # Start with existing profile data to preserve all fields
+        profile_item = dict(existing_item) if existing_item else {}
+
+        # Update/add credit-related fields
+        profile_item['userId'] = user_id
+        profile_item['creditsRemaining'] = new_credits
+        profile_item['totalCreditsPurchased'] = new_total_purchased
+        profile_item['lastPurchaseProductId'] = product_id
+        profile_item['lastPurchaseCredits'] = credits_to_add
+        profile_item['lastPurchaseAmount'] = amount
+        profile_item['lastPurchaseDate'] = datetime.utcnow().isoformat()
+        profile_item['lastPaymentId'] = payment_id
+        profile_item['purchaseHistory'] = purchase_history
+        profile_item['updatedAt'] = datetime.utcnow().isoformat()
 
         # Keep createdAt if it exists
-        if 'Item' in response and 'createdAt' in response['Item']:
-            profile_item['createdAt'] = response['Item']['createdAt']
-        else:
+        if 'createdAt' not in profile_item:
             profile_item['createdAt'] = datetime.utcnow().isoformat()
 
         # Store customer ID if provided
