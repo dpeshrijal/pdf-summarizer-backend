@@ -83,14 +83,14 @@ def lambda_handler(event, context):
 
         if 'Item' not in response:
             # First-time purchaser - create new profile (this should rarely happen now)
-            current_credits = 3  # Start with free credits
+            current_credits = 1  # Start with free credit
             total_purchased = 0
             existing_item = {}
             print(f"Creating new profile for user {user_id}")
         else:
             # Existing user - preserve all existing fields
             existing_item = response['Item']
-            current_credits = int(existing_item.get('creditsRemaining', 3))
+            current_credits = int(existing_item.get('creditsRemaining', 1))
             total_purchased = int(existing_item.get('totalCreditsPurchased', 0))
 
         # Calculate new balances

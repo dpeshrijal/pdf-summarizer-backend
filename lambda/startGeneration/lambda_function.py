@@ -72,7 +72,7 @@ def lambda_handler(event, context):
             profile_response = user_profiles_table.get_item(Key={'userId': user_id})
             if 'Item' in profile_response:
                 profile = profile_response['Item']
-                credits_remaining = int(profile.get('creditsRemaining', 3))
+                credits_remaining = int(profile.get('creditsRemaining', 1))
 
                 if credits_remaining <= 0:
                     print(f"User {user_id} has no credits remaining")
@@ -88,9 +88,9 @@ def lambda_handler(event, context):
 
                 print(f"User {user_id} has {credits_remaining} credits remaining")
             else:
-                # No profile found - allow generation with default 3 free credits
-                # Profile will be created in processGeneration Lambda with creditsRemaining=2 (3 free - 1 used)
-                print(f"No profile found for user {user_id}, allowing generation with default 3 free credits")
+                # No profile found - allow generation with default 1 free credit
+                # Profile will be created in processGeneration Lambda with creditsRemaining=0 (1 free - 1 used)
+                print(f"No profile found for user {user_id}, allowing generation with default 1 free credit")
         except Exception as e:
             print(f"Error checking credits: {e}")
             # Fail open for backwards compatibility - allow generation if credit check fails
