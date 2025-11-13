@@ -2,10 +2,26 @@ import json
 import os
 import boto3
 from datetime import datetime
+from decimal import Decimal
 import re
 
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(os.environ['USER_PROFILES_TABLE'])
+
+def decimal_to_number(obj):
+    """Convert DynamoDB Decimal types to int or float for JSON serialization"""
+    if isinstance(obj, list):
+        return [decimal_to_number(i) for i in obj]
+    elif isinstance(obj, dict):
+        return {k: decimal_to_number(v) for k, v in obj.items()}
+    elif isinstance(obj, Decimal):
+        # Convert to int if no decimal places, otherwise float
+        if obj % 1 == 0:
+            return int(obj)
+        else:
+            return float(obj)
+    else:
+        return obj
 
 def lambda_handler(event, context):
     """
@@ -128,8 +144,6 @@ def lambda_handler(event, context):
                     profile_item['lastPaymentId'] = existing_item['lastPaymentId']
                 if 'dodoCustomerId' in existing_item:
                     profile_item['dodoCustomerId'] = existing_item['dodoCustomerId']
-                if 'purchaseHistory' in existing_item:
-                    profile_item['purchaseHistory'] = existing_item['purchaseHistory']
 
                 # Preserve onboardingComplete if not explicitly provided in request
                 if onboarding_complete is None and 'onboardingComplete' in existing_item:
@@ -160,6 +174,9 @@ def lambda_handler(event, context):
         # Save to DynamoDB
         table.put_item(Item=profile_item)
 
+        # Convert Decimal types before returning
+        profile_response = decimal_to_number(profile_item)
+
         return {
             'statusCode': 200,
             'headers': {
@@ -168,7 +185,7 @@ def lambda_handler(event, context):
             },
             'body': json.dumps({
                 'success': True,
-                'profile': profile_item
+                'profile': profile_response
             })
         }
 

@@ -2,10 +2,26 @@ import json
 import os
 import boto3
 from datetime import datetime
+from decimal import Decimal
 
 # Initialize AWS clients
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(os.environ['USER_PROFILES_TABLE'])
+
+def decimal_to_number(obj):
+    """Convert DynamoDB Decimal types to int or float for JSON serialization"""
+    if isinstance(obj, list):
+        return [decimal_to_number(i) for i in obj]
+    elif isinstance(obj, dict):
+        return {k: decimal_to_number(v) for k, v in obj.items()}
+    elif isinstance(obj, Decimal):
+        # Convert to int if no decimal places, otherwise float
+        if obj % 1 == 0:
+            return int(obj)
+        else:
+            return float(obj)
+    else:
+        return obj
 
 def lambda_handler(event, context):
     """
@@ -69,7 +85,6 @@ def lambda_handler(event, context):
             # First-time purchaser - create new profile (this should rarely happen now)
             current_credits = 3  # Start with free credits
             total_purchased = 0
-            purchase_history = []
             existing_item = {}
             print(f"Creating new profile for user {user_id}")
         else:
@@ -77,21 +92,10 @@ def lambda_handler(event, context):
             existing_item = response['Item']
             current_credits = int(existing_item.get('creditsRemaining', 3))
             total_purchased = int(existing_item.get('totalCreditsPurchased', 0))
-            purchase_history = existing_item.get('purchaseHistory', [])
 
         # Calculate new balances
         new_credits = current_credits + credits_to_add
         new_total_purchased = total_purchased + credits_to_add
-
-        # Add purchase to history
-        purchase_record = {
-            'productId': product_id,
-            'credits': credits_to_add,
-            'amount': amount,
-            'paymentId': payment_id,
-            'purchaseDate': datetime.utcnow().isoformat()
-        }
-        purchase_history.append(purchase_record)
 
         # Start with existing profile data to preserve all fields
         profile_item = dict(existing_item) if existing_item else {}
@@ -105,7 +109,6 @@ def lambda_handler(event, context):
         profile_item['lastPurchaseAmount'] = amount
         profile_item['lastPurchaseDate'] = datetime.utcnow().isoformat()
         profile_item['lastPaymentId'] = payment_id
-        profile_item['purchaseHistory'] = purchase_history
         profile_item['updatedAt'] = datetime.utcnow().isoformat()
 
         # Keep createdAt if it exists
@@ -122,6 +125,9 @@ def lambda_handler(event, context):
         print(f"✓ Credits updated: {current_credits} → {new_credits} (+{credits_to_add})")
         print(f"✓ Total lifetime purchases: {new_total_purchased} credits")
 
+        # Convert Decimal types before returning
+        profile_response = decimal_to_number(profile_item)
+
         return {
             'statusCode': 200,
             'headers': {
@@ -130,7 +136,7 @@ def lambda_handler(event, context):
             },
             'body': json.dumps({
                 'success': True,
-                'profile': profile_item
+                'profile': profile_response
             })
         }
 
